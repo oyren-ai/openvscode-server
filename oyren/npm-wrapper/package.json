@@ -1,0 +1,32 @@
+{
+  "name": "@oyren.ai/openvscode-server",
+  "version": "0.0.0-set-by-ci",
+  "description": "openvscode-server built with third-party chat participants enabled — run your own agent in the built-in Chat view, no Copilot required.",
+  "keywords": [
+    "vscode",
+    "openvscode-server",
+    "code-server",
+    "self-hosted",
+    "chat-participant"
+  ],
+  "bin": {
+    "openvscode-server": "bin/openvscode-server.js"
+  },
+  "scripts": {
+    "postinstall": "node install.js"
+  },
+  "files": [
+    "bin/",
+    "install.js",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oyren-ai/openvscode-server.git"
+  },
+  "homepage": "https://github.com/oyren-ai/openvscode-server",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  }
+}

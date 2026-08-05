@@ -1,0 +1,252 @@
+# Build the Oyren-patched openvscode-server linux-x64 release tarball.
+#
+# Adapted from gitpod-io/openvscode-releases .github/workflows/release.yml (main @ ac271eaf,
+# last changed 2026-02-03 — the exact workflow that built openvscode-server-v1.109.5 on
+# 2026-02-20, run 22234384451, job "Build linux-x64" on ubuntu-latest in 74 min) and
+# .github/workflows/github-release.yml (same repo). Differences from upstream:
+#   - lives IN the fork (oyren-ai/openvscode-server) instead of a separate releases repo,
+#     so checkout uses the default GITHUB_TOKEN, not VSCODE_GITHUB_TOKEN
+#   - triggers on oyren release-tag push (upstream: workflow_dispatch + workflow_run)
+#   - linux-x64 only (upstream matrix: x64/arm64/armhf; QEMU setup dropped with the arm legs)
+#   - fetch-depth 50, not 20: the "Prepare for distribution" grep must reach the
+#     "code web server initial commit" base commit, which sits 17 commits below the
+#     v1.109.5 tag — our oyren patch commits stack on top of that
+#   - tarball is named from the GIT TAG (openvscode-server-v<tag-minus-prefix>-linux-x64),
+#     not from package.json's version, so `-oyren.N` lands in the asset name and the
+#     installer's ${TARBALL} interpolation keeps working
+#   - integration/smoke tests skipped (upstream runs them on x64; saves ~10-15 min —
+#     re-enable by restoring the test steps from upstream release.yml lines 211-256)
+#   - Slack notification steps dropped
+
+name: Build Oyren Release
+
+on:
+  push:
+    tags:
+      - 'openvscode-server-v*-oyren.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to build (e.g. openvscode-server-v1.109.5-oyren.1). Must already exist in the repo.'
+        required: true
+
+# upstream release.yml: QUALITY: ${{ github.event.inputs.quality || 'insider' }} — we always ship stable
+env:
+  QUALITY: stable
+
+jobs:
+  build:
+    # upstream release.yml line 30: `runs-on: ubuntu-latest` (verbatim — free standard runner)
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    name: Build linux-x64
+    permissions:
+      contents: write # create the GitHub Release + upload the asset
+    env:
+      # upstream release.yml lines 49-52
+      OS_NAME: 'linux'
+      VSCODE_ARCH: x64
+      NPM_REGISTRY: 'https://registry.npmjs.org'
+    steps:
+      # upstream release.yml lines 57-62 ("Set up swap") — verbatim incl. the commit pin.
+      # This is gitpod's load-bearing RAM mitigation on the 16GB runner.
+      - name: Set up swap
+        uses: thejerrybao/setup-swap-space@466d59798fb9263b9c2331c83cf71f9b7bfd0c78
+        with:
+          swap-space-path: /swapfile
+          swap-size-gb: 8
+          remove-existing-swap-files: true
+
+      - name: Resolve release tag
+        id: tag
+        run: |
+          set -e
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          case "$TAG" in
+            openvscode-server-v*) ;;
+            *) echo "Tag '$TAG' does not start with openvscode-server-v" >&2; exit 1 ;;
+          esac
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#openvscode-server-v}" >> "$GITHUB_OUTPUT"
+
+      # upstream release.yml lines 64-70, with repository/token defaults (workflow now lives
+      # in the fork itself) and fetch-depth 20 -> 50 (see header). path kept so the build
+      # output lands in $GITHUB_WORKSPACE: gulpfile.reh.ts:40 `BUILD_ROOT = path.dirname(REPO_ROOT)`.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+          fetch-depth: 50
+          path: openvscode-server
+
+      # upstream release.yml lines 72-74
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ./openvscode-server/.nvmrc
+
+      # upstream release.yml lines 76-93 verbatim
+      - name: Setup system services
+        working-directory: ./openvscode-server
+        run: |
+          set -e
+          # Start X server
+          ./build/azure-pipelines/linux/apt-retry.sh sudo apt-get update
+          ./build/azure-pipelines/linux/apt-retry.sh sudo apt-get install -y pkg-config \
+            dbus \
+            xvfb \
+            libgtk-3-0 \
+            libxkbfile-dev \
+            libkrb5-dev \
+            libgbm1 \
+            rpm
+          sudo cp build/azure-pipelines/linux/xvfb.init /etc/init.d/xvfb
+          sudo chmod +x /etc/init.d/xvfb
+          sudo update-rc.d xvfb defaults
+          sudo service xvfb start
+
+      # upstream release.yml lines 95-118 verbatim
+      - name: Compute node modules cache key
+        working-directory: ./openvscode-server
+        id: nodeModulesCacheKey
+        run: |
+          mkdir -p .build
+          echo "value=$(node build/azure-pipelines/common/computeNodeModulesCacheKey.ts linux x64)" >> $GITHUB_OUTPUT
+      - name: Cache node modules
+        id: cacheNodeModules
+        uses: actions/cache@v4
+        with:
+          path: "openvscode-server/**/node_modules"
+          key: ${{ runner.os }}-cacheNodeModulesLinux-${{ steps.nodeModulesCacheKey.outputs.value }}
+      - name: Get npm cache directory path
+        working-directory: ./openvscode-server
+        id: npmCacheDirPath
+        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
+        run: echo "dir=$(npm config get cache)" >> $GITHUB_OUTPUT
+      - name: Cache npm directory
+        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.npmCacheDirPath.outputs.dir }}
+          key: ${{ runner.os }}-npmCacheDir-${{ steps.nodeModulesCacheKey.outputs.value }}
+          restore-keys: ${{ runner.os }}-npmCacheDir-
+
+      # upstream release.yml lines 120-157 verbatim (npm_config_arch pinned to x64)
+      - name: Execute npm
+        working-directory: ./openvscode-server
+        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+          npm_config_arch: x64
+        run: |
+          set -e
+
+          npm config set registry "$NPM_REGISTRY"
+
+          cd ./build
+          for i in {1..5}; do # try 5 times
+            npm ci && break
+            if [ $i -eq 5 ]; then
+              echo "Npm install failed too many times" >&2
+              exit 1
+            fi
+            echo "Npm install failed $i, trying again..."
+          done
+
+          cd ..
+
+          source ./build/azure-pipelines/linux/setup-env.sh
+
+          # Run preinstall script before root dependencies are installed
+          # so that v8 headers are patched correctly for native modules.
+          node build/npm/preinstall.ts
+
+          for i in {1..5}; do # try 5 times
+            npm ci && break
+            if [ $i -eq 5 ]; then
+              echo "Npm install failed too many times" >&2
+              exit 1
+            fi
+            echo "Npm install failed $i, trying again..."
+          done
+
+      # upstream release.yml lines 159-176 verbatim. With QUALITY=stable this only sets
+      # product.json quality; oyren branding stays in install-editor.sh's product.overrides.json.
+      - name: Update product.json
+        working-directory: ./openvscode-server
+        run: |
+          set -e
+          nameShort=$(jq --raw-output '.nameShort' product.json)
+          nameLong=$(jq --raw-output '.nameLong' product.json)
+          if [ "$QUALITY" = "insider" ]; then
+            nameShort="$nameShort - Insiders"
+            nameLong="$nameLong - Insiders"
+          fi
+          setQuality="setpath([\"quality\"]; \"$QUALITY\")"
+          setNameShort="setpath([\"nameShort\"]; \"$nameShort\")"
+          setNameLong="setpath([\"nameLong\"]; \"$nameLong\")"
+          jqCommands="${setQuality} | ${setNameShort} | ${setNameLong}"
+          cat product.json | jq "${jqCommands}" > product.json.tmp
+          mv product.json.tmp product.json
+
+          jq '{quality,nameLong,nameShort}' product.json
+
+      # upstream release.yml lines 178-191 verbatim — requires the base commit inside the
+      # shallow history, hence fetch-depth 50 above (17 upstream commits + oyren patches + 1 parent)
+      - name: Prepare for distribution
+        working-directory: ./openvscode-server
+        run: |
+          set -e
+          base_commit_msg="code web server initial commit"
+          base_commit=$(git log --pretty="%H" --max-count=1 --grep "${base_commit_msg}")
+          if [ -z "$base_commit" ]; then
+            echo "Could not find base commit"
+            exit 1
+          fi
+          distro_commit=$(git rev-parse "${base_commit}"~)
+          echo "distro_commit: ${distro_commit}"
+
+          echo "BUILD_SOURCEVERSION=${distro_commit}" >> $GITHUB_ENV
+
+      # upstream release.yml lines 193-200 verbatim (step name typo and all)
+      - name: coompile vscode
+        working-directory: ./openvscode-server
+        run: |
+          set -e
+          npm run gulp core-ci
+          npm run gulp extensions-ci
+        env:
+          DISABLE_V8_COMPILE_CACHE: 1
+
+      # upstream release.yml lines 202-209, x64 hardcoded. Targets verified to exist at the
+      # v1.109.5 tag in build/gulpfile.reh.ts (serverTaskCI / minifyTask registrations).
+      - name: build vscode linux reh
+        working-directory: ./openvscode-server
+        run: |
+          set -e
+          npm run gulp minify-vscode-reh-web
+          npm run gulp vscode-reh-web-linux-x64-min-ci
+        env:
+          DISABLE_V8_COMPILE_CACHE: 1
+
+      # upstream release.yml lines 266-279 ("Bundle tarfile"), adapted: name comes from the
+      # git tag (so -oyren.N is in the asset name), not package.json's version. The built
+      # server sits at $GITHUB_WORKSPACE/vscode-reh-web-linux-x64 because the repo was checked
+      # out into ./openvscode-server and BUILD_ROOT is the repo's parent dir.
+      - name: Bundle tarfile
+        run: |
+          set -e
+          name="openvscode-server-v${{ steps.tag.outputs.version }}-linux-x64"
+          mv vscode-reh-web-linux-x64 ${name}
+          tar -czf ${name}.tar.gz ${name}
+          ls -lh ${name}.tar.gz
+
+      # upstream github-release.yml lines 33-42 ("Create stable release", softprops/action-gh-release),
+      # adapted: same-repo release with the default GITHUB_TOKEN; tag already exists so
+      # target_commitish is unnecessary.
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          body: Oyren build of OpenVSCode Server ${{ steps.tag.outputs.version }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: openvscode-server-*.tar.gz
