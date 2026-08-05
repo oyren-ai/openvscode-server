@@ -1,0 +1,67 @@
+{
+  "name": "oyren-agent",
+  "displayName": "Oyren Agent",
+  "description": "The sandbox agents behind VS Code's built-in Chat view — one chat that combines every CLI agent.",
+  "version": "0.2.0",
+  "publisher": "oyren",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": { "vscode": "^1.100.0" },
+  "extensionKind": ["workspace"],
+  "main": "./extension.js",
+  "activationEvents": ["onStartupFinished"],
+  "_comment.enabledApiProposals": [
+    "isDefault + modes on the participant, isUserSelectable/isDefault on the provider's models, and",
+    "the chatSessions registration APIs all need proposals at 1.109. Matched against the launcher's",
+    "--enable-proposed-api oyren.oyren-agent (deploy/sandbox-host/start-editor.mjs). Do NOT move",
+    "this list into product.json's extensionEnabledApiProposals: that key OVERRIDES an extension's",
+    "own declaration rather than merging with it."
+  ],
+  "enabledApiProposals": ["defaultChatParticipant", "chatProvider", "chatSessionsProvider"],
+  "contributes": {
+    "_comment.chatParticipants": [
+      "The default participant is the LAUNCH agent and claims all three modes: the panel opens in",
+      "Agent mode (hardcoded default), and getDefaultAgent filters by mode — an ask-only default",
+      "makes every Agent/Edit-mode send die in a swallowed 'Cannot handle request' with no UI.",
+      "Core wraps nothing loop-shaped around an agent-mode participant at 1.109; tool orchestration",
+      "is engine-side. isSticky false on purpose: sticky plants '@oyren' into the input on every",
+      "turn, and this panel IS the Oyren agent — attribution says so, the input shouldn't.",
+      "The named participants back the per-agent chat sessions (sessionProviders.js); they must be",
+      "declared here or the main thread silently rejects their registration. claude-code is absent by design: it runs launch-only (SDK engine, no ACP recipe), and a dead dropdown row is worse than none."
+    ],
+    "_comment.commands": "Slash launches: /codex <task> starts a NEW PAID SESSION running that agent with the task as its first message (docs/oyren-chat-launch.md). The descriptions say so — a user must never learn about the charge from the invoice.",
+    "chatParticipants": [
+      { "id": "oyren.agent", "name": "oyren", "fullName": "Oyren", "description": "Ask the sandbox agent — one chat for every CLI agent.", "isDefault": true, "isSticky": false, "modes": ["ask", "agent", "edit"],
+        "commands": [
+          { "name": "claude", "description": "Launch a NEW paid session running Claude Code, with your message as its first task." },
+          { "name": "codex", "description": "Launch a NEW paid session running Codex, with your message as its first task." },
+          { "name": "cursor", "description": "Launch a NEW paid session running Cursor, with your message as its first task." },
+          { "name": "gemini", "description": "Launch a NEW paid session running Gemini, with your message as its first task." },
+          { "name": "opencode", "description": "Launch a NEW paid session running opencode, with your message as its first task." },
+          { "name": "qwen", "description": "Launch a NEW paid session running Qwen, with your message as its first task." },
+          { "name": "antigravity", "description": "Launch a NEW paid session running Antigravity, with your message as its first task." }
+        ] },
+      { "id": "oyren.codex", "name": "codex", "fullName": "Codex", "description": "Codex on this workspace.", "isSticky": false },
+      { "id": "oyren.cursor", "name": "cursor", "fullName": "Cursor", "description": "Cursor on this workspace.", "isSticky": false },
+      { "id": "oyren.gemini", "name": "gemini", "fullName": "Gemini CLI", "description": "Gemini CLI on this workspace.", "isSticky": false },
+      { "id": "oyren.opencode", "name": "opencode", "fullName": "opencode", "description": "opencode on this workspace.", "isSticky": false },
+      { "id": "oyren.qwen", "name": "qwen", "fullName": "Qwen Code", "description": "Qwen Code on this workspace.", "isSticky": false },
+      { "id": "oyren.antigravity", "name": "antigravity", "fullName": "Antigravity", "description": "Antigravity on this workspace.", "isSticky": false }
+    ],
+    "_comment.chatSessions": [
+      "One entry per CLI agent = one row in the chat's agent-type dropdown (on our patched build;",
+      "stock builds filter these through a hardcoded allowlist and simply never show them).",
+      "type = the runtime's AGENT_KIND ids verbatim — it rides back as ?agent=<type>.",
+      "canDelegate:true makes selection open the session IN the chat widget."
+    ],
+    "chatSessions": [
+      { "type": "codex-cli", "name": "codex", "displayName": "codex", "description": "New Codex chat on this workspace.", "icon": "$(hubot)", "canDelegate": true },
+      { "type": "cursor-cli", "name": "cursor", "displayName": "cursor", "description": "New Cursor chat on this workspace.", "icon": "$(target)", "canDelegate": true },
+      { "type": "gemini-cli", "name": "gemini", "displayName": "gemini", "description": "New Gemini chat on this workspace.", "icon": "$(sparkle)", "canDelegate": true },
+      { "type": "opencode", "name": "opencode", "displayName": "opencode", "description": "New opencode chat on this workspace.", "icon": "$(code)", "canDelegate": true },
+      { "type": "qwen-code", "name": "qwen", "displayName": "qwen", "description": "New Qwen chat on this workspace.", "icon": "$(layers)", "canDelegate": true },
+      { "type": "antigravity-cli", "name": "antigravity", "displayName": "antigravity", "description": "New Antigravity chat on this workspace.", "icon": "$(rocket)", "canDelegate": true }
+    ],
+    "languageModelChatProviders": [{ "vendor": "oyren", "displayName": "Oyren" }]
+  }
+}

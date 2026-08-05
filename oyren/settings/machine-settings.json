@@ -1,0 +1,57 @@
+{
+  "window.title": "${dirty}${activeEditorShort}${separator}${rootName}${separator}Oyren",
+  "workbench.colorTheme": "Default Dark Modern",
+  "workbench.colorCustomizations": {
+    "titleBar.activeBackground": "#0a0a0a",
+    "titleBar.inactiveBackground": "#0a0a0a",
+    "titleBar.activeForeground": "#fafafa",
+    "activityBar.background": "#0a0a0a",
+    "activityBar.foreground": "#fafafa",
+    "activityBarBadge.background": "#fafafa",
+    "activityBarBadge.foreground": "#0a0a0a",
+    "statusBar.background": "#171717",
+    "statusBar.foreground": "#a3a3a3",
+    "statusBar.noFolderBackground": "#171717",
+    "statusBar.debuggingBackground": "#171717",
+    "statusBarItem.remoteBackground": "#262626",
+    "statusBarItem.remoteForeground": "#fafafa"
+  },
+
+  "_comment.chat": "chat.agent.enabled keeps Agent mode in the mode picker — the panel OPENS in Agent mode and our participant handles all three modes. chat.commandCenter.enabled was removed: that key does not exist at 1.109 (the successor is chat.agentsControl.enabled, left at its default).",
+  "chat.agent.enabled": true,
+
+  "_comment.terminalProfiles": "The editor's terminal dropdown IS the agent picker. Every agent CLI is baked into the snapshot, so any of them starts without a re-launch. 'Agent' attaches to the tmux session Oyren's own web terminal shows — same conversation, live, in both places. The named profiles start a SEPARATE agent that shares the files but not the chat, and only the agent this session launched with is guaranteed to have credentials.",
+  "terminal.integrated.defaultProfile.linux": "Agent",
+  "terminal.integrated.profiles.linux": {
+    "Agent": { "path": "/usr/local/bin/oyren-agent-term", "icon": "sparkle" },
+    "opencode": { "path": "/usr/local/bin/oyren-agent-term", "args": ["opencode"], "icon": "robot" },
+    "cursor": { "path": "/usr/local/bin/oyren-agent-term", "args": ["cursor-cli"], "icon": "robot" },
+    "codex": { "path": "/usr/local/bin/oyren-agent-term", "args": ["codex-cli"], "icon": "robot" },
+    "claude": { "path": "/usr/local/bin/oyren-agent-term", "args": ["claude-code"], "icon": "robot" },
+    "gemini": { "path": "/usr/local/bin/oyren-agent-term", "args": ["gemini-cli"], "icon": "robot" },
+    "qwen": { "path": "/usr/local/bin/oyren-agent-term", "args": ["qwen-code"], "icon": "robot" },
+    "antigravity": { "path": "/usr/local/bin/oyren-agent-term", "args": ["antigravity-cli"], "icon": "robot" },
+    "bash": { "path": "bash", "args": ["-l"], "icon": "terminal-bash" }
+  },
+
+  "_comment.scoping": [
+    "Cosmetic only. A session is meant to open on its repo and stay there, and the router pins",
+    "?folder= to $WORKDIR (see sandbox-runtime/src/ideFolder.js) — but that is UX shaping, NOT a",
+    "boundary: /vscode-remote-resource takes an absolute path with no validation, and the integrated",
+    "terminal is a shell. The boundary is the per-session VM and the oyren unix user, which is where",
+    "SageMaker, Cloud Shell, Gitpod and Coder all put it too. Do not mistake these lines for security.",
+    "Note the menu bar can be brought back by right-clicking the activity bar."
+  ],
+  "window.menuBarVisibility": "compact",
+  "workbench.welcomePage.walkthroughs.openOnInstall": false,
+  "workbench.tips.enabled": false,
+  "workbench.enableExperiments": false,
+
+  "security.workspace.trust.enabled": false,
+  "telemetry.telemetryLevel": "off",
+  "update.mode": "none",
+  "workbench.startupEditor": "none",
+
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 800
+}

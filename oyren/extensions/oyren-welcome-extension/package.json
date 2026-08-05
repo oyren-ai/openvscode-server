@@ -1,0 +1,29 @@
+{
+  "name": "oyren-welcome",
+  "displayName": "Oyren Welcome",
+  "description": "How this sandbox works — the walkthrough the middle pane opens on first boot.",
+  "version": "0.1.0",
+  "publisher": "oyren",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": { "vscode": "^1.100.0" },
+  "extensionKind": ["workspace"],
+  "main": "./extension.js",
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "walkthroughs": [
+      {
+        "id": "oyrenGettingStarted",
+        "title": "Welcome to Oyren",
+        "description": "Your agent, your editor, one sandbox — five things worth knowing.",
+        "steps": [
+          { "id": "sandbox", "title": "This is a sandbox, and it is yours", "description": "A dedicated machine was started for this session. The agent you launched works here — and so can you: same files, same shell, same tools. Close the tab and everything keeps running.", "media": { "markdown": "media/sandbox.md" } },
+          { "id": "chat", "title": "One chat, every CLI agent", "description": "The Chat panel talks to the agent this session runs — and the agent-type picker at the bottom of its input can open a session for any of the seven CLI agents on the same files.\n[Open Chat](command:workbench.action.chat.open)", "media": { "markdown": "media/chat.md" } },
+          { "id": "terminal", "title": "The terminal is live in two places", "description": "The default terminal profile attaches to the same tmux session the Oyren app's Terminal pane shows — one conversation, two screens. The profile dropdown can also start any other agent, or a plain bash.\n[Open Terminal](command:workbench.action.terminal.new)", "media": { "markdown": "media/terminal.md" } },
+          { "id": "files", "title": "Files sync with your workspace", "description": "Everything under /home/oyren/workspace is the session's working copy. The agent's edits show up here live, and your saves are what the agent reads next.", "media": { "markdown": "media/files.md" } },
+          { "id": "time", "title": "Sessions are paid by the hour", "description": "The countdown in the Oyren header shows the paid runtime left; +1h extends it, repeatably, up to the session's cap. The editor keeps working right up to the deadline.", "media": { "markdown": "media/time.md" } }
+        ]
+      }
+    ]
+  }
+}
