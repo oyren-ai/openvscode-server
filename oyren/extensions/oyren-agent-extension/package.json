@@ -26,11 +26,16 @@
       "Core wraps nothing loop-shaped around an agent-mode participant at 1.109; tool orchestration",
       "is engine-side. isSticky false on purpose: sticky plants '@oyren' into the input on every",
       "turn, and this panel IS the Oyren agent — attribution says so, the input shouldn't.",
-      "The named participants back the per-agent chat sessions (sessionProviders.js); they must be",
-      "declared here or the main thread silently rejects their registration, and their id must be",
-      "the chatSessions TYPE verbatim — a delegated session locks the widget to agent id === type,",
-      "so any other id dies at send with 'No activated agent'. claude-code is absent by design: it",
-      "runs launch-only (SDK engine, no ACP recipe), and a dead dropdown row is worse than none."
+      "The per-agent participants are DELIBERATELY NOT declared here. A canDelegate chatSessions",
+      "contribution auto-registers a chat agent with id === type (_enableContribution -> _registerAgent",
+      "in chatSessions.contribution.ts), and the contribution loop has no per-entry catch — a static",
+      "declaration with the same id throws 'Agent already registered' and kills every LATER",
+      "contribution (live symptom: only codex in the dropdown, welcome branding gone).",
+      "sessionProviders.js attaches the impl via createChatParticipant(type): the main thread accepts",
+      "an undeclared id when a chatSessions contribution of that type exists. The id must be the",
+      "TYPE verbatim — a delegated session locks the widget to agent id === type, so any other id",
+      "dies at send with 'No activated agent'. claude-code is absent by design: it runs launch-only",
+      "(SDK engine, no ACP recipe), and a dead dropdown row is worse than none."
     ],
     "_comment.commands": "Slash launches: /codex <task> starts a NEW PAID SESSION running that agent with the task as its first message (docs/oyren-chat-launch.md). The descriptions say so — a user must never learn about the charge from the invoice.",
     "chatParticipants": [
@@ -43,13 +48,7 @@
           { "name": "opencode", "description": "Launch a NEW paid session running opencode, with your message as its first task." },
           { "name": "qwen", "description": "Launch a NEW paid session running Qwen, with your message as its first task." },
           { "name": "antigravity", "description": "Launch a NEW paid session running Antigravity, with your message as its first task." }
-        ] },
-      { "id": "codex-cli", "name": "codex", "fullName": "Codex", "description": "Codex on this workspace.", "isSticky": false },
-      { "id": "cursor-cli", "name": "cursor", "fullName": "Cursor", "description": "Cursor on this workspace.", "isSticky": false },
-      { "id": "gemini-cli", "name": "gemini", "fullName": "Gemini CLI", "description": "Gemini CLI on this workspace.", "isSticky": false },
-      { "id": "opencode", "name": "opencode", "fullName": "opencode", "description": "opencode on this workspace.", "isSticky": false },
-      { "id": "qwen-code", "name": "qwen", "fullName": "Qwen Code", "description": "Qwen Code on this workspace.", "isSticky": false },
-      { "id": "antigravity-cli", "name": "antigravity", "fullName": "Antigravity", "description": "Antigravity on this workspace.", "isSticky": false }
+        ] }
     ],
     "_comment.chatSessions": [
       "One entry per CLI agent = one row in the chat's agent-type dropdown (on our patched build;",
