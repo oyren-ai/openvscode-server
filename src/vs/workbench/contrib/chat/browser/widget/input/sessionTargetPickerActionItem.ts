@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as dom from '../../../../../../base/browser/dom.js';
+import { asCSSUrl } from '../../../../../../base/browser/cssValue.js';
 import { renderLabelWithIcons } from '../../../../../../base/browser/ui/iconLabel/iconLabels.js';
 import { IAction } from '../../../../../../base/common/actions.js';
 import { IDisposable } from '../../../../../../base/common/lifecycle.js';
@@ -189,11 +190,18 @@ export class SessionTypePickerActionItem extends ChatInputPickerActionViewItem {
 		this._sessionTypeItems = agentSessionItems;
 	}
 
-	// A contribution's own codicon beats the built-in switch; file-URI icons cannot render in
-	// these action rows, so they fall back to the switch like everything else.
-	private _iconForSessionType(type: AgentSessionProviders): ThemeIcon {
+	// A contribution's own icon beats the built-in switch. Image icons (URIs, from an SVG-path
+	// contribution) are honoured only without a defaultChatAgent — stock products keep their
+	// ThemeIcon-only rendering unchanged.
+	private _iconForSessionType(type: AgentSessionProviders): ThemeIcon | URI {
 		const contributed = this.chatSessionsService.getIconForSessionType(type);
-		return ThemeIcon.isThemeIcon(contributed) ? contributed : getAgentSessionProviderIcon(type);
+		if (ThemeIcon.isThemeIcon(contributed)) {
+			return contributed;
+		}
+		if (URI.isUri(contributed) && !this.productService.defaultChatAgent) {
+			return contributed;
+		}
+		return getAgentSessionProviderIcon(type);
 	}
 
 	protected _isVisible(type: AgentSessionProviders): boolean {
@@ -223,7 +231,21 @@ export class SessionTypePickerActionItem extends ChatInputPickerActionViewItem {
 		const icon = this._iconForSessionType(currentType ?? AgentSessionProviders.Local);
 
 		const labelElements = [];
-		labelElements.push(...renderLabelWithIcons(`$(${icon.id})`));
+		if (ThemeIcon.isThemeIcon(icon)) {
+			labelElements.push(...renderLabelWithIcons(`$(${icon.id})`));
+		} else {
+			// An image icon from a chat session contribution — same footprint as a codicon glyph.
+			const imageIcon = dom.$('span.chat-session-type-image-icon');
+			imageIcon.style.display = 'inline-block';
+			imageIcon.style.width = '16px';
+			imageIcon.style.height = '16px';
+			imageIcon.style.backgroundImage = asCSSUrl(icon);
+			imageIcon.style.backgroundSize = 'contain';
+			imageIcon.style.backgroundRepeat = 'no-repeat';
+			imageIcon.style.backgroundPosition = 'center';
+			imageIcon.style.verticalAlign = 'middle';
+			labelElements.push(imageIcon);
+		}
 		if (currentType !== AgentSessionProviders.Local || !this.pickerOptions.onlyShowIconsForDefaultActions.get()) {
 			labelElements.push(dom.$('span.chat-input-picker-label', undefined, label));
 		}

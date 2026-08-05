@@ -14,6 +14,8 @@ import { ResolvedKeybinding } from '../../../base/common/keybindings.js';
 import { Disposable, DisposableStore, MutableDisposable } from '../../../base/common/lifecycle.js';
 import { OS } from '../../../base/common/platform.js';
 import { ThemeIcon } from '../../../base/common/themables.js';
+import { URI } from '../../../base/common/uri.js';
+import { asCSSUrl } from '../../../base/browser/cssValue.js';
 import './actionWidget.css';
 import { localize } from '../../../nls.js';
 import { IContextViewService } from '../../contextview/browser/contextView.js';
@@ -51,7 +53,7 @@ export interface IActionListItemHover {
 export interface IActionListItem<T> {
 	readonly item?: T;
 	readonly kind: ActionListItemKind;
-	readonly group?: { kind?: unknown; icon?: ThemeIcon; title: string };
+	readonly group?: { kind?: unknown; icon?: ThemeIcon | URI; title: string };
 	readonly disabled?: boolean;
 	readonly label?: string;
 	readonly description?: string;
@@ -178,10 +180,23 @@ class ActionItemRenderer<T> implements IListRenderer<IActionListItem<T>, IAction
 		// Clear previous element disposables
 		data.elementDisposables.clear();
 
+		data.icon.removeAttribute('style');
 		if (element.group?.icon) {
-			data.icon.className = ThemeIcon.asClassName(element.group.icon);
-			if (element.group.icon.color) {
-				data.icon.style.color = asCssVariable(element.group.icon.color.id);
+			if (ThemeIcon.isThemeIcon(element.group.icon)) {
+				data.icon.className = ThemeIcon.asClassName(element.group.icon);
+				if (element.group.icon.color) {
+					data.icon.style.color = asCssVariable(element.group.icon.color.id);
+				}
+			} else {
+				// An image icon (e.g. a chat session type contributed with SVG paths): rendered as
+				// a background image with the same footprint as a codicon glyph.
+				data.icon.className = 'icon';
+				data.icon.style.backgroundImage = asCSSUrl(element.group.icon);
+				data.icon.style.backgroundSize = 'contain';
+				data.icon.style.backgroundRepeat = 'no-repeat';
+				data.icon.style.backgroundPosition = 'center';
+				data.icon.style.width = '16px';
+				data.icon.style.height = '16px';
 			}
 		} else {
 			data.icon.className = ThemeIcon.asClassName(Codicon.lightBulb);
