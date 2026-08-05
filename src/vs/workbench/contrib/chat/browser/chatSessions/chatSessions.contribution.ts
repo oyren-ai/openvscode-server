@@ -22,6 +22,7 @@ import { IRelaxedExtensionDescription } from '../../../../../platform/extensions
 import { InstantiationType, registerSingleton } from '../../../../../platform/instantiation/common/extensions.js';
 import { ServicesAccessor } from '../../../../../platform/instantiation/common/instantiation.js';
 import { ILabelService } from '../../../../../platform/label/common/label.js';
+import { IProductService } from '../../../../../platform/product/common/productService.js';
 import { ILogService } from '../../../../../platform/log/common/log.js';
 import { isDark } from '../../../../../platform/theme/common/theme.js';
 import { IThemeService } from '../../../../../platform/theme/common/themeService.js';
@@ -304,7 +305,8 @@ export class ChatSessionsService extends Disposable implements IChatSessionsServ
 		@IContextKeyService private readonly _contextKeyService: IContextKeyService,
 		@IMenuService private readonly _menuService: IMenuService,
 		@IThemeService private readonly _themeService: IThemeService,
-		@ILabelService private readonly _labelService: ILabelService
+		@ILabelService private readonly _labelService: ILabelService,
+		@IProductService private readonly _productService: IProductService
 	) {
 		super();
 
@@ -330,18 +332,19 @@ export class ChatSessionsService extends Disposable implements IChatSessionsServ
 		}));
 
 		const builtinSessionProviders = [AgentSessionProviders.Local];
+		// Products with a default chat agent keep the built-in allowlist; without one every
+		// registered contribution is a session provider (its own displayName/description label it).
 		const contributedSessionProviders = observableFromEvent(
 			this.onDidChangeAvailability,
-			() => Array.from(this._contributions.keys()).filter(isAgentSessionProviderType) as AgentSessionProviders[],
+			() => Array.from(this._contributions.keys()).filter(type => isAgentSessionProviderType(type) || !this._productService.defaultChatAgent) as AgentSessionProviders[],
 		).recomputeInitiallyAndOnChange(this._store);
 
 		this._register(autorun(reader => {
 			backgroundAgentDisplayName.read(reader);
 			const activatedProviders = [...builtinSessionProviders, ...contributedSessionProviders.read(reader)];
-			for (const provider of Object.values(AgentSessionProviders)) {
-				if (activatedProviders.includes(provider)) {
-					reader.store.add(registerNewSessionInPlaceAction(provider, getAgentSessionProviderName(provider)));
-				}
+			for (const provider of new Set(activatedProviders)) {
+				const displayName = this._contributions.get(provider)?.contribution.displayName ?? getAgentSessionProviderName(provider);
+				reader.store.add(registerNewSessionInPlaceAction(provider, displayName));
 			}
 		}));
 

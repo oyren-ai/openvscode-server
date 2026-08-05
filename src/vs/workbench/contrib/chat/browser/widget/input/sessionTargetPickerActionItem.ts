@@ -16,6 +16,7 @@ import { ICommandService } from '../../../../../../platform/commands/common/comm
 import { IContextKeyService } from '../../../../../../platform/contextkey/common/contextkey.js';
 import { IKeybindingService } from '../../../../../../platform/keybinding/common/keybinding.js';
 import { IOpenerService } from '../../../../../../platform/opener/common/opener.js';
+import { IProductService } from '../../../../../../platform/product/common/productService.js';
 import { ITelemetryService } from '../../../../../../platform/telemetry/common/telemetry.js';
 import { IChatSessionsService } from '../../../common/chatSessionsService.js';
 import { AgentSessionProviders, backgroundAgentDisplayName, getAgentSessionProvider, getAgentSessionProviderDescription, getAgentSessionProviderIcon, getAgentSessionProviderName, isFirstPartyAgentSessionProvider } from '../../agentSessions/agentSessions.js';
@@ -53,6 +54,7 @@ export class SessionTypePickerActionItem extends ChatInputPickerActionViewItem {
 		@ICommandService protected readonly commandService: ICommandService,
 		@IOpenerService protected readonly openerService: IOpenerService,
 		@ITelemetryService telemetryService: ITelemetryService,
+		@IProductService protected readonly productService: IProductService,
 	) {
 
 		const actionProvider: IActionWidgetDropdownActionProvider = {
@@ -164,14 +166,17 @@ export class SessionTypePickerActionItem extends ChatInputPickerActionViewItem {
 		const contributions = this.chatSessionsService.getAllChatSessionContributions();
 		for (const contribution of contributions) {
 			const agentSessionType = getAgentSessionProvider(contribution.type);
-			if (!agentSessionType) {
+			// Products with a default chat agent keep the built-in allowlist; without one every
+			// registered contribution is listed, labeled from its own displayName/description.
+			if (!agentSessionType && this.productService.defaultChatAgent) {
 				continue;
 			}
 
+			const type = agentSessionType ?? contribution.type as AgentSessionProviders;
 			agentSessionItems.push({
-				type: agentSessionType,
-				label: getAgentSessionProviderName(agentSessionType),
-				hoverDescription: getAgentSessionProviderDescription(agentSessionType),
+				type,
+				label: agentSessionType ? getAgentSessionProviderName(type) : (contribution.displayName || contribution.type),
+				hoverDescription: agentSessionType ? getAgentSessionProviderDescription(type) : (contribution.description || getAgentSessionProviderDescription(type)),
 				commandId: contribution.canDelegate ?
 					`workbench.action.chat.openNewChatSessionInPlace.${contribution.type}` :
 					`workbench.action.chat.openNewChatSessionExternal.${contribution.type}`,
@@ -200,7 +205,10 @@ export class SessionTypePickerActionItem extends ChatInputPickerActionViewItem {
 		this.setAriaLabelAttributes(element);
 		const currentType = this._getSelectedSessionType();
 
-		const label = getAgentSessionProviderName(currentType ?? AgentSessionProviders.Local);
+		// Contributed (non-enum) types carry their label on the picker item; the enum switch is
+		// only the fallback.
+		const item = currentType ? this._sessionTypeItems.find(candidate => candidate.type === currentType) : undefined;
+		const label = item?.label ?? getAgentSessionProviderName(currentType ?? AgentSessionProviders.Local);
 		const icon = getAgentSessionProviderIcon(currentType ?? AgentSessionProviders.Local);
 
 		const labelElements = [];

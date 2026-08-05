@@ -59,6 +59,10 @@ export function getAgentSessionProviderName(provider: AgentSessionProviders): st
 			return 'Claude';
 		case AgentSessionProviders.Codex:
 			return 'Codex';
+		default:
+			// Contributed session types outside the built-in enum (the picker prefers the
+			// contribution's own displayName; this is the last-resort label).
+			return provider;
 	}
 }
 
@@ -74,6 +78,8 @@ export function getAgentSessionProviderIcon(provider: AgentSessionProviders): Th
 			return Codicon.openai;
 		case AgentSessionProviders.Claude:
 			return Codicon.claude;
+		default:
+			return Codicon.terminal;
 	}
 }
 
@@ -86,6 +92,8 @@ export function isFirstPartyAgentSessionProvider(provider: AgentSessionProviders
 		case AgentSessionProviders.Claude:
 		case AgentSessionProviders.Codex:
 			return false;
+		default:
+			return false;
 	}
 }
 
@@ -97,6 +105,8 @@ export function getAgentCanContinueIn(provider: AgentSessionProviders): boolean 
 			return true;
 		case AgentSessionProviders.Claude:
 		case AgentSessionProviders.Codex:
+			return false;
+		default:
 			return false;
 	}
 }
@@ -113,6 +123,8 @@ export function getAgentSessionProviderDescription(provider: AgentSessionProvide
 			return localize('chat.session.providerDescription.claude', "Delegate tasks to the Claude Agent SDK using the Claude models included in your GitHub Copilot subscription. The agent iterates via chat and works interactively to implement changes on your main workspace.");
 		case AgentSessionProviders.Codex:
 			return localize('chat.session.providerDescription.codex', "Opens a new Codex session in the editor. Codex sessions can be managed from the chat sessions view.");
+		default:
+			return localize('chat.session.providerDescription.contributed', "Opens a new chat session handled by the {0} agent.", getAgentSessionProviderName(provider));
 	}
 }
 
