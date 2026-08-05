@@ -46,6 +46,10 @@ export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribu
 
 		this.runningSessionsCount = this.chatSessionsService.getInProgress().reduce((total, item) => total + item.count, 0);
 
+		if (!product.defaultChatAgent) {
+			return; // status entry and its dashboard are entirely about the default chat agent
+		}
+
 		this.update();
 
 		this.registerListeners();
