@@ -17,6 +17,7 @@ import { IContextKeyService } from '../../../../../../platform/contextkey/common
 import { IKeybindingService } from '../../../../../../platform/keybinding/common/keybinding.js';
 import { IOpenerService } from '../../../../../../platform/opener/common/opener.js';
 import { IProductService } from '../../../../../../platform/product/common/productService.js';
+import { ThemeIcon } from '../../../../../../base/common/themables.js';
 import { ITelemetryService } from '../../../../../../platform/telemetry/common/telemetry.js';
 import { IChatSessionsService } from '../../../common/chatSessionsService.js';
 import { AgentSessionProviders, backgroundAgentDisplayName, getAgentSessionProvider, getAgentSessionProviderDescription, getAgentSessionProviderIcon, getAgentSessionProviderName, isFirstPartyAgentSessionProvider } from '../../agentSessions/agentSessions.js';
@@ -72,7 +73,7 @@ export class SessionTypePickerActionItem extends ChatInputPickerActionViewItem {
 						id: sessionTypeItem.commandId,
 						label: sessionTypeItem.label,
 						checked: currentType === sessionTypeItem.type,
-						icon: getAgentSessionProviderIcon(sessionTypeItem.type),
+						icon: this._iconForSessionType(sessionTypeItem.type),
 						enabled: this._isSessionTypeEnabled(sessionTypeItem.type),
 						category: this._getSessionCategory(sessionTypeItem),
 						description: this._getSessionDescription(sessionTypeItem),
@@ -161,7 +162,10 @@ export class SessionTypePickerActionItem extends ChatInputPickerActionViewItem {
 			commandId: `workbench.action.chat.openNewChatSessionInPlace.${AgentSessionProviders.Local}`,
 		};
 
-		const agentSessionItems: ISessionTypeItem[] = [localSessionItem];
+		// No default chat agent ⇒ the dropdown lists ONLY contributed agents: "Local" is whatever
+		// agent the session launched with, which already owns the default chat — a row for it would
+		// be a duplicate that reads like a different thing.
+		const agentSessionItems: ISessionTypeItem[] = this.productService.defaultChatAgent ? [localSessionItem] : [];
 
 		const contributions = this.chatSessionsService.getAllChatSessionContributions();
 		for (const contribution of contributions) {
@@ -183,6 +187,13 @@ export class SessionTypePickerActionItem extends ChatInputPickerActionViewItem {
 			});
 		}
 		this._sessionTypeItems = agentSessionItems;
+	}
+
+	// A contribution's own codicon beats the built-in switch; file-URI icons cannot render in
+	// these action rows, so they fall back to the switch like everything else.
+	private _iconForSessionType(type: AgentSessionProviders): ThemeIcon {
+		const contributed = this.chatSessionsService.getIconForSessionType(type);
+		return ThemeIcon.isThemeIcon(contributed) ? contributed : getAgentSessionProviderIcon(type);
 	}
 
 	protected _isVisible(type: AgentSessionProviders): boolean {
@@ -209,7 +220,7 @@ export class SessionTypePickerActionItem extends ChatInputPickerActionViewItem {
 		// only the fallback.
 		const item = currentType ? this._sessionTypeItems.find(candidate => candidate.type === currentType) : undefined;
 		const label = item?.label ?? getAgentSessionProviderName(currentType ?? AgentSessionProviders.Local);
-		const icon = getAgentSessionProviderIcon(currentType ?? AgentSessionProviders.Local);
+		const icon = this._iconForSessionType(currentType ?? AgentSessionProviders.Local);
 
 		const labelElements = [];
 		labelElements.push(...renderLabelWithIcons(`$(${icon.id})`));
