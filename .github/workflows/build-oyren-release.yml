@@ -169,14 +169,17 @@ jobs:
             echo "Npm install failed $i, trying again..."
           done
 
-      # upstream release.yml lines 159-176 verbatim. With QUALITY=stable this only sets
-      # product.json quality; oyren branding stays in install-editor.sh's product.overrides.json.
+      # upstream release.yml lines 159-176, with one difference: nameShort/nameLong are set to
+      # "Oyren Editor" here because product.json is INLINED into workbench.js at build time
+      # (build/gulpfile.reh.ts createVSCodeWebFileContentMapper) — the runtime overrides in
+      # install-editor.sh's product.overrides.json provably cannot reach the browser-visible
+      # "VS Code for the Web" strings. Server-side overrides stay in product.overrides.json.
       - name: Update product.json
         working-directory: ./openvscode-server
         run: |
           set -e
-          nameShort=$(jq --raw-output '.nameShort' product.json)
-          nameLong=$(jq --raw-output '.nameLong' product.json)
+          nameShort="Oyren Editor"
+          nameLong="Oyren Editor"
           if [ "$QUALITY" = "insider" ]; then
             nameShort="$nameShort - Insiders"
             nameLong="$nameLong - Insiders"
