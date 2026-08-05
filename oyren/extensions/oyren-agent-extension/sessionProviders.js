@@ -34,7 +34,10 @@ function registerSessionProviders(context) {
       // rejects ?agent=<launch kind> on purpose, so route it to the plain client.
       const kind = type === (process.env.AGENT_KIND || "") ? null : type
       const client = createClient(process.env, kind)
-      const participant = vscode.chat.createChatParticipant(`oyren.${name}`, makeHandler(client))
+      // The participant id MUST be the session type verbatim: a delegated session locks the chat
+      // widget to agent id === chatSessions type, and any other id dies at send with
+      // `No activated agent with id "<type>"`.
+      const participant = vscode.chat.createChatParticipant(type, makeHandler(client))
       context.subscriptions.push(participant)
       context.subscriptions.push(vscode.chat.registerChatSessionItemProvider(type, {
         onDidChangeChatSessionItems: none.event,
