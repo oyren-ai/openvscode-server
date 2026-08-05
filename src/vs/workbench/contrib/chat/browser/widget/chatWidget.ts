@@ -46,6 +46,7 @@ import { EditorResourceAccessor } from '../../../../common/editor.js';
 import { IEditorService } from '../../../../services/editor/common/editorService.js';
 import { IChatEntitlementService } from '../../../../services/chat/common/chatEntitlementService.js';
 import { ILifecycleService } from '../../../../services/lifecycle/common/lifecycle.js';
+import { IProductService } from '../../../../../platform/product/common/productService.js';
 import { checkModeOption } from '../../common/chat.js';
 import { IChatAgentAttachmentCapabilities, IChatAgentCommand, IChatAgentData, IChatAgentService } from '../../common/participants/chatAgents.js';
 import { ChatContextKeys } from '../../common/actions/chatContextKeys.js';
@@ -367,7 +368,8 @@ export class ChatWidget extends Disposable implements IChatWidget {
 		@IAgentSessionsService private readonly agentSessionsService: IAgentSessionsService,
 		@IChatTodoListService private readonly chatTodoListService: IChatTodoListService,
 		@IWorkspaceContextService private readonly contextService: IWorkspaceContextService,
-		@ILifecycleService private readonly lifecycleService: ILifecycleService
+		@ILifecycleService private readonly lifecycleService: ILifecycleService,
+		@IProductService private readonly productService: IProductService
 	) {
 		super();
 
@@ -922,6 +924,18 @@ export class ChatWidget extends Disposable implements IChatWidget {
 			};
 		}
 
+		// With no default chat agent configured, this build's chat is the sandbox agent — brand the
+		// welcome for it instead of the Copilot-shaped mode titles.
+		if (!this.productService.defaultChatAgent) {
+			return {
+				title: localize('oyrenAgentWelcomeTitle', "Oyren Agent"),
+				message: new MarkdownString(localize('oyrenAgentWelcomeMessage', "One chat for every CLI agent — opencode, cursor, codex, claude, gemini, qwen and antigravity. The agent running in this sandbox answers here.")),
+				icon: Codicon.chatSparkle,
+				additionalMessage,
+				suggestedPrompts: this.getPromptFileSuggestions()
+			};
+		}
+
 		let title: string;
 		if (this.input.currentModeKind === ChatModeKind.Ask) {
 			title = localize('chatDescription', "Ask about your code");
@@ -944,6 +958,22 @@ export class ChatWidget extends Disposable implements IChatWidget {
 
 		// Use predefined suggestions for new users
 		if (!this.chatEntitlementService.sentiment.installed) {
+			// No default chat agent: the sandbox agent answers, so suggest prompts about the
+			// workspace it landed in rather than Copilot setup flows.
+			if (!this.productService.defaultChatAgent) {
+				return [
+					{
+						icon: Codicon.search,
+						label: localize('chatWidget.suggestedPrompts.oyrenExplore', "Explore Repo"),
+						prompt: localize('chatWidget.suggestedPrompts.oyrenExplorePrompt', "What is this repo and what should I look at first?"),
+					},
+					{
+						icon: Codicon.history,
+						label: localize('chatWidget.suggestedPrompts.oyrenRecent', "Recent Changes"),
+						prompt: localize('chatWidget.suggestedPrompts.oyrenRecentPrompt', "What changed recently?"),
+					}
+				];
+			}
 			const isEmpty = this.contextService.getWorkbenchState() === WorkbenchState.EMPTY;
 			if (isEmpty) {
 				return [
