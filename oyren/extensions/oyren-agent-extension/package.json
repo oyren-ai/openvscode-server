@@ -52,15 +52,17 @@
       "One entry per CLI agent = one row in the chat's agent-type dropdown (on our patched build;",
       "stock builds filter these through a hardcoded allowlist and simply never show them).",
       "type = the runtime's AGENT_KIND ids verbatim — it rides back as ?agent=<type>.",
-      "canDelegate:true makes selection open the session IN the chat widget."
+      "canDelegate:true makes selection open the session IN the chat widget.",
+      "Icons are the brand SVGs ({light,dark} paths, resolved against the extension). Builds before",
+      "oyren.4 fall back to the built-in terminal codicon; monochrome marks ship a per-theme pair."
     ],
     "chatSessions": [
-      { "type": "codex-cli", "name": "codex", "displayName": "codex", "description": "New Codex chat on this workspace.", "icon": "$(hubot)", "canDelegate": true },
-      { "type": "cursor-cli", "name": "cursor", "displayName": "cursor", "description": "New Cursor chat on this workspace.", "icon": "$(target)", "canDelegate": true },
-      { "type": "gemini-cli", "name": "gemini", "displayName": "gemini", "description": "New Gemini chat on this workspace.", "icon": "$(sparkle)", "canDelegate": true },
-      { "type": "opencode", "name": "opencode", "displayName": "opencode", "description": "New opencode chat on this workspace.", "icon": "$(code)", "canDelegate": true },
-      { "type": "qwen-code", "name": "qwen", "displayName": "qwen", "description": "New Qwen chat on this workspace.", "icon": "$(layers)", "canDelegate": true },
-      { "type": "antigravity-cli", "name": "antigravity", "displayName": "antigravity", "description": "New Antigravity chat on this workspace.", "icon": "$(rocket)", "canDelegate": true }
+      { "type": "codex-cli", "name": "codex", "displayName": "codex", "description": "New Codex chat on this workspace.", "icon": { "light": "media/agents/codex-light.svg", "dark": "media/agents/codex-dark.svg" }, "canDelegate": true },
+      { "type": "cursor-cli", "name": "cursor", "displayName": "cursor", "description": "New Cursor chat on this workspace.", "icon": { "light": "media/agents/cursor.svg", "dark": "media/agents/cursor.svg" }, "canDelegate": true },
+      { "type": "gemini-cli", "name": "gemini", "displayName": "gemini", "description": "New Gemini chat on this workspace.", "icon": { "light": "media/agents/gemini.svg", "dark": "media/agents/gemini.svg" }, "canDelegate": true },
+      { "type": "opencode", "name": "opencode", "displayName": "opencode", "description": "New opencode chat on this workspace.", "icon": { "light": "media/agents/opencode-light.svg", "dark": "media/agents/opencode-dark.svg" }, "canDelegate": true },
+      { "type": "qwen-code", "name": "qwen", "displayName": "qwen", "description": "New Qwen chat on this workspace.", "icon": { "light": "media/agents/qwen.svg", "dark": "media/agents/qwen.svg" }, "canDelegate": true },
+      { "type": "antigravity-cli", "name": "antigravity", "displayName": "antigravity", "description": "New Antigravity chat on this workspace.", "icon": { "light": "media/agents/antigravity.svg", "dark": "media/agents/antigravity.svg" }, "canDelegate": true }
     ],
     "languageModelChatProviders": [{ "vendor": "oyren", "displayName": "Oyren" }]
   }
