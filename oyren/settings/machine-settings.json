@@ -47,6 +47,10 @@
   "workbench.tips.enabled": false,
   "workbench.enableExperiments": false,
 
+  "_comment.claudeCode": "The sandbox already runs claude with everything allowed (sandbox-runtime seeds ~/.claude/settings.json to bypassPermissions + IS_SANDBOX=1), but the Claude Code EXTENSION's mode picker never reads that file — it reads these two settings and otherwise defaults to Manual, telling the user the opposite of the truth. BOTH keys are required: without the boolean the extension silently downgrades bypassPermissions back to Manual. Machine scope on purpose — re-seeded from extras every boot, so the visible default matches the actual policy even though a user can still switch modes per conversation.",
+  "claudeCode.allowDangerouslySkipPermissions": true,
+  "claudeCode.initialPermissionMode": "bypassPermissions",
+
   "security.workspace.trust.enabled": false,
   "telemetry.telemetryLevel": "off",
   "update.mode": "none",
