@@ -92,6 +92,7 @@ import { IChatEditingSession, IModifiedFileEntry, ModifiedFileEntryState } from 
 import { ILanguageModelChatMetadata, ILanguageModelChatMetadataAndIdentifier, ILanguageModelsService } from '../../../common/languageModels.js';
 import { IChatModelInputState, IChatRequestModeInfo, IInputModel } from '../../../common/model/chatModel.js';
 import { getChatSessionType } from '../../../common/model/chatUri.js';
+import { IProductService } from '../../../../../../platform/product/common/productService.js';
 import { IChatResponseViewModel, isResponseVM } from '../../../common/model/chatViewModel.js';
 import { IChatAgentService } from '../../../common/participants/chatAgents.js';
 import { ILanguageModelToolsService } from '../../../common/tools/languageModelToolsService.js';
@@ -497,6 +498,7 @@ export class ChatInputPart extends Disposable implements IHistoryNavigationWidge
 		@IWorkspaceContextService private readonly workspaceContextService: IWorkspaceContextService,
 		@IWorkbenchLayoutService private readonly layoutService: IWorkbenchLayoutService,
 		@IViewDescriptorService private readonly viewDescriptorService: IViewDescriptorService,
+		@IProductService private readonly productService: IProductService,
 	) {
 		super();
 
@@ -1999,7 +2001,22 @@ export class ChatInputPart extends Disposable implements IHistoryNavigationWidge
 					// Use provided delegate if available, otherwise create default delegate
 					const getActiveSessionType = () => {
 						const sessionResource = this._widget?.viewModel?.sessionResource;
-						return sessionResource ? getAgentSessionProvider(sessionResource) : undefined;
+						if (!sessionResource) {
+							return undefined;
+						}
+						const enumProvider = getAgentSessionProvider(sessionResource);
+						if (enumProvider || this.productService.defaultChatAgent) {
+							return enumProvider;
+						}
+						// A contributed (non-enum) session type still names its own picker row: without
+						// this a delegated opencode/codex-cli session renders as "Local" + monitor, which
+						// reads as a different thing entirely. The raw type is safe here — on products
+						// without a default chat agent the picker's item list is built from the same
+						// contributions, so the row it resolves against always exists.
+						const contributedType = getChatSessionType(sessionResource);
+						return contributedType && this.chatSessionsService.getChatSessionContribution(contributedType)
+							? contributedType as AgentSessionProviders
+							: undefined;
 					};
 					const delegate: ISessionTypePickerDelegate = this.options.sessionTypePickerDelegate ?? {
 						getActiveSessionProvider: () => {
