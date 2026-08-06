@@ -9,6 +9,7 @@
 const vscode = require("vscode")
 const { createClient } = require("./agentClient")
 const { makeHandler } = require("./turnHandler")
+const { createSessionOptions } = require("./sessionOptions")
 
 // type = the runtime's AGENT_KIND ids, verbatim — the ?agent= value the sandbox validates against
 // its spawn table. claude-code is deliberately absent: it runs launch-only (SDK engine, no ACP
@@ -44,8 +45,19 @@ function registerSessionProviders(context) {
         // No enumerable history: side sessions live only as open editors/tabs for now.
         provideChatSessionItems: () => [],
       }))
+      // The model picker of a delegated session comes from these option hooks, not from the lm
+      // provider — see sessionOptions.js. Opening the session is what loads the list.
+      const options = createSessionOptions(client, type)
+      context.subscriptions.push(...options.emitters)
       context.subscriptions.push(vscode.chat.registerChatSessionContentProvider(type, {
-        provideChatSessionContent: () => ({ history: [], requestHandler: makeHandler(client) }),
+        onDidChangeChatSessionProviderOptions: options.onDidChangeProviderOptions,
+        onDidChangeChatSessionOptions: options.onDidChangeSessionOptions,
+        provideChatSessionProviderOptions: options.provideProviderOptions,
+        provideHandleOptionsChange: options.handleOptionsChange,
+        provideChatSessionContent: (resource) => {
+          options.loadModels(resource)
+          return { history: [], options: options.knownSelection(), requestHandler: makeHandler(client) }
+        },
       }, participant, { supportsInterruptions: true }))
     } catch (err) {
       console.error(`oyren-agent: session provider for ${type} failed: ${err && err.message}`)
