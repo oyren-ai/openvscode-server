@@ -3,7 +3,7 @@
 > Draft implementation plan for Fable. This PR intentionally changes no editor behavior yet.
 > It targets the deployed `oyren/1.109` branch and depends on the runtime protocol being deployed first.
 
-Runtime dependency: [server plan](https://github.com/oyren-ai/oyren-ai-deployable-containers/blob/plan/vscode-agent-session-history-server/docs/plans/vscode-agent-session-history-server.md).
+Runtime dependency: [oyren-ai-deployable-containers PR #30](https://github.com/oyren-ai/oyren-ai-deployable-containers/pull/30).
 
 ## Implementation checklist
 
