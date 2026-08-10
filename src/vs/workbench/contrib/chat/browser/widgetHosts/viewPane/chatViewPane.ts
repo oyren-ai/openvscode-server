@@ -13,7 +13,7 @@ import { Event } from '../../../../../../base/common/event.js';
 import { MutableDisposable, toDisposable, DisposableStore } from '../../../../../../base/common/lifecycle.js';
 import { MarshalledId } from '../../../../../../base/common/marshallingIds.js';
 import { autorun, IReader } from '../../../../../../base/common/observable.js';
-import { URI } from '../../../../../../base/common/uri.js';
+import { URI, UriComponents } from '../../../../../../base/common/uri.js';
 import { localize } from '../../../../../../nls.js';
 import { MenuWorkbenchToolBar } from '../../../../../../platform/actions/browser/toolbar.js';
 import { MenuId } from '../../../../../../platform/actions/common/actions.js';
@@ -45,7 +45,7 @@ import { IChatModel, IChatModelInputState } from '../../../common/model/chatMode
 import { CHAT_PROVIDER_ID } from '../../../common/participants/chatParticipantContribTypes.js';
 import { IChatModelReference, IChatService } from '../../../common/chatService/chatService.js';
 import { IChatSessionsService, localChatSessionType } from '../../../common/chatSessionsService.js';
-import { LocalChatSessionUri, getChatSessionType } from '../../../common/model/chatUri.js';
+import { getChatSessionType } from '../../../common/model/chatUri.js';
 import { ChatAgentLocation, ChatConfiguration, ChatModeKind } from '../../../common/constants.js';
 import { AgentSessionsControl } from '../../agentSessions/agentSessionsControl.js';
 import { ACTION_ID_NEW_CHAT } from '../../actions/chatActions.js';
@@ -65,7 +65,12 @@ import { IAgentSession } from '../../agentSessions/agentSessionsModel.js';
 import { IChatEntitlementService } from '../../../../../services/chat/common/chatEntitlementService.js';
 
 interface IChatViewPaneState extends Partial<IChatModelInputState> {
-	sessionId?: string;
+	/**
+	 * The full session resource, not just a bare id — a contributed (non-local) session's scheme
+	 * carries its type (e.g. `codex-cli:/<uuid>`), and reconstructing that scheme is required to
+	 * restore the same session on reload instead of silently falling back to a local one.
+	 */
+	sessionResource?: UriComponents;
 
 	sessionsSidebarWidth?: number;
 }
@@ -128,7 +133,7 @@ export class ChatViewPane extends ViewPane implements IViewWelcomeDelegate {
 			lifecycleService.startupKind !== StartupKind.ReloadedWindow &&
 			this.configurationService.getValue<boolean>(ChatConfiguration.RestoreLastPanelSession) === false
 		) {
-			this.viewState.sessionId = undefined; // clear persisted session on fresh start
+			this.viewState.sessionResource = undefined; // clear persisted session on fresh start
 		}
 		this.sessionsViewerVisible = false; // will be updated from layout code
 		this.sessionsViewerSidebarWidth = Math.max(ChatViewPane.SESSIONS_SIDEBAR_MIN_WIDTH, this.viewState.sessionsSidebarWidth ?? ChatViewPane.SESSIONS_SIDEBAR_DEFAULT_WIDTH);
@@ -275,7 +280,7 @@ export class ChatViewPane extends ViewPane implements IViewWelcomeDelegate {
 			return this.chatService.transferredSessionResource;
 		}
 
-		return this.viewState.sessionId ? LocalChatSessionUri.forSession(this.viewState.sessionId) : undefined;
+		return this.viewState.sessionResource ? URI.revive(this.viewState.sessionResource) : undefined;
 	}
 
 	protected override renderBody(parent: HTMLElement): void {
@@ -683,7 +688,7 @@ export class ChatViewPane extends ViewPane implements IViewWelcomeDelegate {
 		if (model) {
 			await this.updateWidgetLockState(model.sessionResource); // Update widget lock state based on session type
 
-			this.viewState.sessionId = model.sessionId; // remember as model to restore in view state
+			this.viewState.sessionResource = model.sessionResource; // remember to restore the exact (possibly delegated) session on reload
 		}
 
 		this._widget.setModel(model);
