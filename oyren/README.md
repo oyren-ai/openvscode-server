@@ -45,3 +45,13 @@ lives in the private `oyren-ai-composer` repo, which owns the droplet image.
   side-engine recipe), and a dead dropdown row is worse than none.
 - `npm-wrapper/` is the `@oyren.ai/openvscode-server` npm package: a thin postinstall wrapper
   that downloads the matching server release tarball.
+- **Display language**: "Configure Display Language" (Command Palette) and installing a
+  marketplace language pack (`open-vsx.org`, unmodified from upstream — the
+  `MS-CEINTL.vscode-language-pack-*` extensions it looks for are there) both work end-to-end.
+  Core workbench strings (menus, settings, the Command Palette itself) will not actually
+  translate, though — `product.json` has never set `nlsCoreBaseUrl`, the field
+  `src/vs/server/node/webClientServer.ts` needs to serve a translated core NLS bundle instead of
+  the English fallback. That field is a Microsoft-internal-CDN feature upstream openvscode-server
+  never had either, not something this fork disabled — standing it up means hosting a translated
+  bundle source ourselves, not a code fix. Extension-contributed strings (the language pack's own
+  point) translate correctly regardless.

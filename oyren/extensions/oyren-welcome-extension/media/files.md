@@ -1,5 +1,7 @@
 ## The working copy
 
+![A folder with a sync icon](files.svg)
+
 Your repository lives at **`/home/oyren/workspace/<repo>`**. This editor, the agents and the
 terminal all act on the same tree — the agent's edits appear here as it makes them, and what you
 save is what the agent reads next.

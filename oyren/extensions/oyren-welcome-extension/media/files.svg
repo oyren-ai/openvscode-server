@@ -1,0 +1,10 @@
+<svg viewBox="0 0 240 140" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A folder with a sync icon over its corner">
+  <path d="M30 40 h50 l14 16 h74 a8 8 0 0 1 8 8 v46 a8 8 0 0 1 -8 8 H30 a8 8 0 0 1 -8 -8 V48 a8 8 0 0 1 8 -8 z"
+        fill="none" stroke="#38BDF8" stroke-width="3" stroke-linejoin="round"/>
+  <g transform="translate(148,26)">
+    <path d="M8 24a16 16 0 0 1 27-11.5" fill="none" stroke="#34D399" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M40 24a16 16 0 0 1 -27 11.5" fill="none" stroke="#34D399" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M31 7 l5 6 l-7 2 z" fill="#34D399"/>
+    <path d="M17 41 l-5 -6 l7 -2 z" fill="#34D399"/>
+  </g>
+</svg>
