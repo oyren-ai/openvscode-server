@@ -1,0 +1,19 @@
+<svg viewBox="0 0 240 140" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Several agents feeding into one chat bubble">
+  <g stroke="#94A3B8" stroke-width="1.5" stroke-opacity="0.6">
+    <line x1="30" y1="28" x2="122" y2="62"/>
+    <line x1="30" y1="54" x2="122" y2="66"/>
+    <line x1="30" y1="80" x2="122" y2="70"/>
+    <line x1="30" y1="106" x2="122" y2="74"/>
+  </g>
+  <g fill="#38BDF8">
+    <circle cx="26" cy="28" r="6"/>
+    <circle cx="26" cy="54" r="6"/>
+    <circle cx="26" cy="80" r="6"/>
+    <circle cx="26" cy="106" r="6"/>
+  </g>
+  <path d="M122 38 h76 a10 10 0 0 1 10 10 v40 a10 10 0 0 1 -10 10 h-50 l-18 18 v-18 h-8 a10 10 0 0 1 -10 -10 v-40 a10 10 0 0 1 10 -10 z"
+        fill="none" stroke="#38BDF8" stroke-width="3" stroke-linejoin="round"/>
+  <circle cx="152" cy="76" r="4" fill="#38BDF8"/>
+  <circle cx="170" cy="76" r="4" fill="#38BDF8"/>
+  <circle cx="188" cy="76" r="4" fill="#38BDF8"/>
+</svg>

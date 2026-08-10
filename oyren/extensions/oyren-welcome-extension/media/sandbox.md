@@ -1,5 +1,7 @@
 ## A machine of your own
 
+![A dedicated terminal window with a live status light](sandbox.svg)
+
 Every session gets a **dedicated sandbox** — a real Linux machine, not a container slice. The agent
 you launched runs on it natively, and the browser editor you are reading this in runs beside it.
 

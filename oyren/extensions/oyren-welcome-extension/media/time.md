@@ -1,5 +1,7 @@
 ## Paid by the hour
 
+![A clock with a plus-one-hour badge](time.svg)
+
 Sessions run on paid time. The countdown in the Oyren header shows what's left, and **+1h** adds an
 hour — repeatably, up to the session's cap. Each hour is charged in credits when you add it.
 
