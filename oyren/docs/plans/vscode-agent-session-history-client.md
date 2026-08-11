@@ -408,3 +408,28 @@ falling back to another engine.
 - Rename, archive, delete, share, or export synchronization.
 - Migrating to a newer Chat Sessions controller API or upgrading the OpenVSCode base.
 - Patching core workbench behavior unrelated to the pinned proposal contract.
+
+## Status (release-prep re-audit, 2026-08-11)
+
+Re-checked this plan for internal consistency and drift as part of a cross-repo pass to get every
+repo down to the fewest open PRs that make sense ahead of release. No content changes were needed:
+
+- Protocol v1 surface (`GET /agent/capabilities`, `GET /agent/sessions?agent=<kind>`,
+  `POST /agent/sessions`, `GET /agent/sessions/:id`, `GET /agent/sessions/:id/history`, and the
+  paired `agent`/`session` parameters on existing endpoints) still matches the runtime side's
+  current design.
+- The pinned VS Code 1.109 contract section (proposal version 3, `ChatSession.history` semantics,
+  constructible `ChatRequestTurn`/`ChatResponseTurn2`/`ChatResponseMarkdownPart`, and the note against
+  migrating to the newer controller API) is unchanged and still accurate for the deployed branch.
+- The client/server ownership boundary and persistence scope (survives process/editor restarts for
+  the life of the server/container; no cross-server archival in this PR) still match the runtime PR's
+  own persistence proposal.
+- Markdown is well-formed (balanced code fences, consistent heading hierarchy, no broken structure).
+
+Still correctly **draft** per this plan's own stated rollout criterion above ("Keep this PR draft
+until the runtime server PR is deployed to a canary and reports protocol v1" / "Server-first rollout
+and rollback are demonstrated before this PR leaves draft"): the runtime half,
+[oyren-ai-deployable-containers#30](https://github.com/oyren-ai/oyren-ai-deployable-containers/pull/30),
+is confirmed still open/draft, not deployed to any canary. This is a structural cross-repo dependency,
+not a gap more in-container verification can close — nothing here needs a live editor session to
+resolve, it needs the runtime PR to land and canary first.
