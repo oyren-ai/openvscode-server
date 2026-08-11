@@ -53,6 +53,14 @@ div.chat-welcome-view {
 		-webkit-mask-size: 40px;
 	}
 
+	& > .chat-welcome-view-icon img.chat-welcome-brand-icon {
+		height: 40px;
+	}
+
+	& > .chat-welcome-view-icon.large-icon img.chat-welcome-brand-icon {
+		height: 72px;
+	}
+
 	& > .chat-welcome-view-icon.large-icon {
 		min-width: 72px;
 		min-height: 72px;

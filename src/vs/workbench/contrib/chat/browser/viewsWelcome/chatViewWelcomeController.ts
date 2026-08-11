@@ -179,6 +179,12 @@ export class ChatViewWelcomePart extends Disposable {
 				if (ThemeIcon.isThemeIcon(content.icon)) {
 					const iconElement = renderIcon(content.icon);
 					icon.appendChild(iconElement);
+				} else if (URI.isUri(content.icon) && content.icon.scheme === 'data') {
+					// A data URI carries a full-color brand image (this fork's Oyren welcome): the mask
+					// branch below would flatten it to the theme's icon foreground, so render it as-is.
+					const img = dom.append(icon, $('img.chat-welcome-brand-icon')) as HTMLImageElement;
+					img.src = content.icon.toString(true);
+					img.alt = '';
 				} else if (URI.isUri(content.icon)) {
 					const cssUrl = asCSSUrl(content.icon);
 					const hash = new StringSHA1();

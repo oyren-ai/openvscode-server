@@ -41,8 +41,25 @@ lives in the private `oyren-ai-composer` repo, which owns the droplet image.
   at v2.1.221 to contribute no `chatSessions`. If a future version starts contributing one, a
   "Claude" row reappears in the agent-type dropdown — disable with `INSTALL_CLAUDE_EXTENSION=0`
   at bake, or pin the extension version.
+- `openai.chatgpt` (Codex, from Open VSX) is installed at bake time the same way, but — unlike
+  Claude — it DOES contribute a `chatSessions` entry (`type: "openai-codex", name: "Codex"`,
+  verified at v26.5803.61601), so its own native "Codex" row and chat panel appear in the
+  agent-type dropdown alongside Oyren's existing synthetic `codex-cli` entry (the ACP-driven
+  headless CLI session type). The two are separate integrations with separate auth flows — this
+  is a known, accepted duplication for now, not a bug; disable with `INSTALL_CODEX_EXTENSION=0`
+  at bake if the duplicate row becomes a problem before it's reconciled.
 - `claude-code` has no chat-session row on purpose: it runs launch-only (SDK engine, no ACP
   side-engine recipe), and a dead dropdown row is worse than none.
+- The other official companions — `qwenlm.qwen-code-vscode-ide-companion` and
+  `google.gemini-cli-vscode-ide-companion` — are deliberately NOT baked or bundled: they're
+  installable from the editor's own marketplace (Open VSX) inside a session, on demand (decision
+  2026-08-12). Verified at 0.21.10/0.20.0: neither contributes `chatSessions`, so no dropdown row
+  either way — Qwen brings its own sidebar chat webview, Gemini's pairs with the terminal CLI
+  (context/diffing only). The synthetic `qwen-code`/`gemini-cli` rows therefore remain the only
+  native-chat, sandbox-credentialed integration. An in-session install persists for that
+  server's life only; fresh sessions start without it unless a bake later adds it per-user.
+  (`google.geminicodeassist` also exists on Open VSX but is proprietary-licensed and 178 MB —
+  never bundle it into editor-extras; marketplace install is the only sanctioned path.)
 - `npm-wrapper/` is the `@oyren.ai/openvscode-server` npm package: a thin postinstall wrapper
   that downloads the matching server release tarball.
 - **Display language**: "Configure Display Language" (Command Palette) and installing a

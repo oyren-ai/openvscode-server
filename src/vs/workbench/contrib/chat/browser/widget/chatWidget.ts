@@ -171,6 +171,11 @@ export class ChatWidget extends Disposable implements IChatWidget {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	static readonly CONTRIBS: { new(...args: [IChatWidget, ...any]): IChatWidgetContrib }[] = [];
 
+	// The Oyren "O" mark (neon stadium on transparent), inlined so the welcome needs no asset
+	// pipeline; getWelcomeViewContent hands it to the data-URI image branch of the welcome renderer.
+	private static readonly OYREN_WELCOME_ICON = URI.parse('data:image/svg+xml,' + encodeURIComponent(
+		'<svg xmlns="http://www.w3.org/2000/svg" viewBox="133 262 534 276"><path fill="#CCF500" fill-rule="evenodd" d="M271 262h258a138 138 0 0 1 0 276H271a138 138 0 0 1 0-276Zm38 87h182a51 51 0 0 1 0 102H309a51 51 0 0 1 0-102Z"/></svg>'));
+
 	private readonly _onDidSubmitAgent = this._register(new Emitter<{ agent: IChatAgentData; slashCommand?: IChatAgentCommand }>());
 	readonly onDidSubmitAgent = this._onDidSubmitAgent.event;
 
@@ -925,12 +930,14 @@ export class ChatWidget extends Disposable implements IChatWidget {
 		}
 
 		// With no default chat agent configured, this build's chat is the sandbox agent — brand the
-		// welcome for it instead of the Copilot-shaped mode titles.
+		// welcome for it instead of the Copilot-shaped mode titles. The icon is the Oyren logo as a
+		// self-contained data URI: the welcome renderer shows data URIs as real images, so the brand
+		// green survives instead of being mask-flattened to the theme's icon foreground.
 		if (!this.productService.defaultChatAgent) {
 			return {
 				title: localize('oyrenAgentWelcomeTitle', "Oyren Agent"),
 				message: new MarkdownString(localize('oyrenAgentWelcomeMessage', "One chat for every CLI agent — opencode, cursor, codex, claude, gemini, qwen and antigravity. The agent running in this sandbox answers here.")),
-				icon: Codicon.chatSparkle,
+				icon: ChatWidget.OYREN_WELCOME_ICON,
 				additionalMessage,
 				suggestedPrompts: this.getPromptFileSuggestions()
 			};
