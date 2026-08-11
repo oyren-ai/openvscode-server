@@ -41,6 +41,13 @@ lives in the private `oyren-ai-composer` repo, which owns the droplet image.
   at v2.1.221 to contribute no `chatSessions`. If a future version starts contributing one, a
   "Claude" row reappears in the agent-type dropdown — disable with `INSTALL_CLAUDE_EXTENSION=0`
   at bake, or pin the extension version.
+- `openai.chatgpt` (Codex, from Open VSX) is installed at bake time the same way, but — unlike
+  Claude — it DOES contribute a `chatSessions` entry (`type: "openai-codex", name: "Codex"`,
+  verified at v26.5803.61601), so its own native "Codex" row and chat panel appear in the
+  agent-type dropdown alongside Oyren's existing synthetic `codex-cli` entry (the ACP-driven
+  headless CLI session type). The two are separate integrations with separate auth flows — this
+  is a known, accepted duplication for now, not a bug; disable with `INSTALL_CODEX_EXTENSION=0`
+  at bake if the duplicate row becomes a problem before it's reconciled.
 - `claude-code` has no chat-session row on purpose: it runs launch-only (SDK engine, no ACP
   side-engine recipe), and a dead dropdown row is worse than none.
 - `npm-wrapper/` is the `@oyren.ai/openvscode-server` npm package: a thin postinstall wrapper
