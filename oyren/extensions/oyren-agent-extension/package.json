@@ -9,6 +9,8 @@
   "engines": { "vscode": "^1.100.0" },
   "extensionKind": ["workspace"],
   "main": "./extension.js",
+  "_comment.scripts": "Plain `node --test` (no dependencies): the *.test.js files fake vscode and HTTP. pack-editor-extras.sh runs this before its node --check gate.",
+  "scripts": { "test": "node --test" },
   "activationEvents": ["onStartupFinished"],
   "_comment.enabledApiProposals": [
     "isDefault + modes on the participant, isUserSelectable/isDefault on the provider's models, and",

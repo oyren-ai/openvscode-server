@@ -1,0 +1,13 @@
+{
+  "_comment": "GET /agent/sessions?agent=codex-cli fixture, verbatim from the runtime v1 contract (oyren-ai-deployable-containers docs/plans/vscode-agent-session-history-server.md). Four valid records — one per status — then three records a hostile/buggy server could emit: a non-canonical id, a wrong-kind record, a missing label. Mapping must keep exactly the four and keep server order.",
+  "protocol": 1,
+  "sessions": [
+    { "id": "0f0e0d0c-0b0a-4a4b-8c8d-1e1f2a2b3c3d", "agent": "codex-cli", "label": "Refactor the auth flow", "status": "in_progress", "model": "gpt-5-codex", "createdAt": "2026-08-10T09:00:00.000Z", "updatedAt": "2026-08-10T09:01:00.000Z", "lastRequestStartedAt": "2026-08-10T09:01:00.000Z", "interactionCount": 1, "historyTruncated": false },
+    { "id": "6bf52dd0-8b2b-4a2d-bd17-25352e3ab7ea", "agent": "codex-cli", "label": "Fix the flaky workspace test", "status": "completed", "model": "gpt-5-codex", "createdAt": "2026-08-09T12:00:00.000Z", "updatedAt": "2026-08-09T12:04:00.000Z", "lastRequestStartedAt": "2026-08-09T12:03:00.000Z", "lastRequestEndedAt": "2026-08-09T12:04:00.000Z", "interactionCount": 3, "historyTruncated": false },
+    { "id": "11111111-2222-4333-8444-555555555555", "agent": "codex-cli", "label": "Chase the broken build", "status": "failed", "createdAt": "2026-08-08T08:00:00.000Z", "updatedAt": "2026-08-08T08:02:00.000Z", "lastRequestStartedAt": "2026-08-08T08:01:00.000Z", "lastRequestEndedAt": "2026-08-08T08:02:00.000Z", "interactionCount": 1, "historyTruncated": false },
+    { "id": "99999999-8888-4777-8666-555544443333", "agent": "codex-cli", "label": "New codex chat", "status": "empty", "createdAt": "2026-08-11T10:00:00.000Z", "updatedAt": "2026-08-11T10:00:00.000Z", "lastRequestStartedAt": "2026-08-11T10:00:30.000Z", "interactionCount": 0, "historyTruncated": false },
+    { "id": "NOT-A-UUID", "agent": "codex-cli", "label": "corrupt id", "status": "completed", "createdAt": "2026-08-11T10:00:00.000Z" },
+    { "id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee", "agent": "cursor-cli", "label": "wrong kind", "status": "completed", "createdAt": "2026-08-11T10:00:00.000Z" },
+    { "id": "bbbbbbbb-cccc-4ddd-8eee-ffffffffffff", "agent": "codex-cli", "status": "completed", "createdAt": "2026-08-11T10:00:00.000Z" }
+  ]
+}

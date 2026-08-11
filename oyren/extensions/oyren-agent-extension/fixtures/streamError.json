@@ -1,0 +1,9 @@
+{
+  "_comment": "An error turn: the readable error is appended to the visible text exactly once, by the result fold. history.json's error interaction persists this same projection — restored output must equal live output.",
+  "lines": [
+    { "type": "stream_event", "event": { "type": "content_block_delta", "delta": { "type": "text_delta", "text": "Deploying the fix…" } } },
+    { "type": "result", "is_error": true, "error": "Boom: disk full" }
+  ],
+  "visible": "Deploying the fix…\n\nBoom: disk full",
+  "progress": []
+}

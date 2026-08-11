@@ -1,0 +1,15 @@
+{
+  "_comment": "One completed turn as the runtime streams it (parsed stream-json lines, the shapes renderStream.js folds) and the EXACT visible markdown the server persists for it. Live rendering and restored history share this fixture: deltas append in order, the consolidated assistant line does not re-render its text, tool_use is transient progress only, thinking/tool results/pings/unknown lines are silent, and `result` ends the turn.",
+  "lines": [
+    { "type": "stream_event", "event": { "type": "content_block_delta", "delta": { "type": "text_delta", "text": "I found " } } },
+    { "type": "stream_event", "event": { "type": "content_block_delta", "delta": { "type": "thinking_delta", "thinking": "hidden reasoning must never render" } } },
+    { "type": "stream_event", "event": { "type": "content_block_delta", "delta": { "type": "text_delta", "text": "a race in the fixture cleanup." } } },
+    { "type": "assistant", "message": { "content": [ { "type": "text", "text": "I found a race in the fixture cleanup." }, { "type": "tool_use", "name": "Bash" } ] } },
+    { "type": "user", "message": { "content": [ { "type": "tool_result", "content": "raw tool output must never render" } ] } },
+    { "type": "ping" },
+    { "type": "some_future_line_type", "payload": true },
+    { "type": "result", "is_error": false }
+  ],
+  "visible": "I found a race in the fixture cleanup.",
+  "progress": ["Running Bash…"]
+}

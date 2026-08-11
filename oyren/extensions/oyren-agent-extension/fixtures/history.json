@@ -1,0 +1,32 @@
+{
+  "_comment": "GET /agent/sessions/:id/history fixture. Three valid completed interactions — plain success, empty-markdown success (still needs a response part so pairing stays stable), error (the readable error is ALREADY in the markdown once, appended server-side; the client must not append it again) — plus one malformed interaction that must be dropped WHOLE. The error markdown deliberately equals streamError.json's projected text: restored must match live.",
+  "protocol": 1,
+  "session": { "id": "6bf52dd0-8b2b-4a2d-bd17-25352e3ab7ea", "agent": "codex-cli" },
+  "interactions": [
+    {
+      "id": "9f62245a-d5c9-42f6-8bc6-68e09828f4fa",
+      "model": "gpt-5-codex",
+      "request": { "text": "Fix the flaky workspace test", "at": "2026-08-09T12:03:00.000Z" },
+      "response": { "markdown": "I found a race in the fixture cleanup.", "outcome": "success", "at": "2026-08-09T12:03:01.000Z", "completedAt": "2026-08-09T12:04:00.000Z" }
+    },
+    {
+      "id": "1c9c5e2a-77aa-4c39-9a30-0d5a2f9b6f10",
+      "model": "gpt-5-codex",
+      "request": { "text": "Silently apply it", "at": "2026-08-09T12:04:10.000Z" },
+      "response": { "markdown": "", "outcome": "success", "at": "2026-08-09T12:04:11.000Z", "completedAt": "2026-08-09T12:04:20.000Z" }
+    },
+    {
+      "id": "2b8d1f4e-90bb-4e58-8c41-6e7f3a0c9d21",
+      "model": "gpt-5-codex",
+      "request": { "text": "Run the deploy", "at": "2026-08-09T12:05:00.000Z" },
+      "response": { "markdown": "Deploying the fix…\n\nBoom: disk full", "outcome": "error", "at": "2026-08-09T12:05:01.000Z", "completedAt": "2026-08-09T12:05:30.000Z" }
+    },
+    {
+      "id": "3d0e2a5f-a1cc-4f69-9d52-7f8e4b1dae32",
+      "request": { "text": 42 },
+      "response": { "markdown": "half a record" }
+    }
+  ],
+  "active": null,
+  "truncatedBefore": null
+}

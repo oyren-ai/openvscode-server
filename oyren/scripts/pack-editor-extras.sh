@@ -30,6 +30,11 @@ cp "$HERE/merge-product.js" "$OUT/pack/scripts/"
 tr -d '[:space:]' < "$ROOT/SERVER_VERSION" > "$OUT/pack/server-version"
 date -u +"%Y-%m-%dT%H:%M:%SZ" > "$OUT/pack/BUILT_AT"
 
+# Unit gate before anything leaves this machine: the agent extension's protocol/provider suite
+# (plain `node --test`, no dependencies — vscode and HTTP are faked/local). Runs on the checkout,
+# deliberately NOT in paid CI; a red suite must never publish.
+( cd "$ROOT/extensions/oyren-agent-extension" && node --test )
+
 # Sanity before anything leaves this machine: broken JSON here bricks every new session's editor
 # layer until the next publish.
 [ -s "$OUT/pack/server-version" ] || { echo "SERVER_VERSION is empty" >&2; exit 1; }

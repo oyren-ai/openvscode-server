@@ -7,15 +7,17 @@ Runtime dependency: [oyren-ai-deployable-containers PR #30](https://github.com/o
 
 ## Implementation checklist
 
-- [ ] Import protocol fixtures from the finalized runtime v1 contract and add client tests before changing providers.
-- [ ] Add capability negotiation plus session-aware list/create/history/message/stream/control methods.
-- [ ] Add strict resource/session parsing and pure metadata/history-to-VS Code mappers.
-- [ ] Replace the hardcoded empty item and content providers for all six delegated kinds.
-- [ ] Implement untitled-to-durable commit exactly once after server session creation succeeds.
-- [ ] Scope busy state, model selection, cancellation, and replay cursors by chat resource.
-- [ ] Restore completed history and reconnect an active response without duplicated markdown.
-- [ ] Preserve the default participant and old-runtime behavior behind capability detection.
+- [x] Import protocol fixtures from the finalized runtime v1 contract and add client tests before changing providers.
+- [x] Add capability negotiation plus session-aware list/create/history/message/stream/control methods.
+- [x] Add strict resource/session parsing and pure metadata/history-to-VS Code mappers.
+- [x] Replace the hardcoded empty item and content providers for all six delegated kinds.
+- [x] Implement untitled-to-durable commit exactly once after server session creation succeeds.
+- [x] Scope busy state, model selection, cancellation, and replay cursors by chat resource.
+- [x] Restore completed history and reconnect an active response without duplicated markdown.
+- [x] Preserve the default participant and old-runtime behavior behind capability detection.
 - [ ] Add unit, protocol-fixture, pinned-1.109 integration, and six-provider manual coverage.
+      *(unit + protocol-fixture suites are in and green — 63 tests, `node --test`; the pinned-image
+      integration test and the manual six-provider matrix still need a built server + live runtime.)*
 - [ ] Ship only after the server canary passes; document feature disable and rollback.
 
 ## Outcome
@@ -291,23 +293,38 @@ server error bodies.
 
 ## Patch map
 
-Expected new modules (names can change only after updating this document and PR body):
+As implemented (this list is the source of truth; it superseded the original sketch — a repo-wide
+100-line-per-file rule split the work finer than first planned). New modules, all under
+`oyren/extensions/oyren-agent-extension/`:
 
-- `oyren/extensions/oyren-agent-extension/sessionResource.js`
-- `oyren/extensions/oyren-agent-extension/sessionMapper.js`
-- `oyren/extensions/oyren-agent-extension/sessionState.js`
-- shared JSON protocol fixtures and matching `*.test.js` files
+- `sessionResource.js` — six kinds + URI parse/build gate (also now owns the `KINDS` table).
+- `sessionMapper.js` — session metadata → `ChatSessionItem` (status/timing table, safe metadata).
+- `historyTurns.js` — history document → pinned-1.109 turn constructors (injected via ctx).
+- `sessionState.js` — per-UUID busy/model/replay-cursor maps, per-kind item cache, create single-flight.
+- `agentHttp.js` — shared transport: URL/URLSearchParams builder, typed status errors, ndjson streamer.
+- `sessionClient.js` — protocol v1 surface: capabilities single-flight (404 ⇒ legacy), sessions
+  CRUD/history, session-aware models/interrupt/message/indexed-stream.
+- `sessionItems.js` / `sessionContent.js` — the real item and content providers.
+- `sessionCommit.js` — untitled→durable machine (commit fires once, after a matching server ack).
+- `activeReplay.js` — activeResponseCallback: seed + tail strictly after the cursor, dedupe by
+  (boot, session, n).
+- `modelSelection.js` — per-resource picker value/choice routing over sessionState.
+- `sessionErrors.js` — protocol status → one friendly rendered sentence.
+- `launchCommands.js` — the default participant's /launch slash commands (moved out of turnHandler).
+- `fixtures/*.json` (shared with the runtime PR) + `fakes.js` + eleven `*.test.js` files.
 
-Expected refactors:
+Refactors, as implemented:
 
-- `agentClient.js`: protocol negotiation, safe URL builder, session APIs, per-resource state/replay.
-- `sessionProviders.js`: real item/content providers, emitters, commit lifecycle, cache.
-- `turnHandler.js`: resource-aware creation/send/cancel and item lifecycle callbacks.
-- `renderStream.js`: reusable live/history projection contract without changing visible semantics.
-- `sessionOptions.js`: kind-level available models plus resource-level selection.
-- `extension.js`: construct/register shared services and dispose them through `ExtensionContext`.
-- `package.json`: add a focused `node --test` script without changing the proposal list or six kinds.
-- `oyren/scripts/pack-editor-extras.sh` or CI: run extension tests before the existing `node --check` gate.
+- `agentClient.js`: legacy per-kind surface preserved verbatim, rebuilt on `agentHttp.js`.
+- `sessionProviders.js`: wires clients, state, emitters, commit lifecycle, providers per kind.
+- `turnHandler.js`: legacy path byte-compatible; session path resource-aware behind capability detection.
+- `renderStream.js`: unchanged — its live/restored contract is locked by the shared fixtures instead.
+- `sessionOptions.js`: kind-level available models plus resource-level selection (modelSelection.js).
+- `extension.js`: unchanged — shared services are constructed inside `registerSessionProviders`,
+  disposed through `ExtensionContext` subscriptions as before.
+- `package.json`: `"test": "node --test"`, proposal list and the six kinds untouched.
+- `oyren/scripts/pack-editor-extras.sh`: runs the suite before the `node --check` gate (local by
+  design — publish validation must not depend on paid CI).
 
 Do not patch VS Code workbench core for this feature. The pinned proposal already exposes the item,
 content, context, commit, history, and active-response surfaces required by the adapter.
@@ -408,6 +425,19 @@ falling back to another engine.
 - Rename, archive, delete, share, or export synchronization.
 - Migrating to a newer Chat Sessions controller API or upgrading the OpenVSCode base.
 - Patching core workbench behavior unrelated to the pinned proposal contract.
+
+## Status (implementation landed, 2026-08-12)
+
+The client implementation described by this plan now exists in this PR — all modules in the patch
+map above, with 63 unit/protocol-fixture tests green under plain `node --test` (no dependencies).
+What remains, and why the PR is STILL draft:
+
+- the pinned-editor integration test and the six-provider manual matrix need a built `oyren/1.109`
+  server plus a protocol-capable runtime — neither exists yet;
+- the structural gate is unchanged: the runtime half
+  ([oyren-ai-deployable-containers#30](https://github.com/oyren-ai/oyren-ai-deployable-containers/pull/30))
+  is still a plan-only draft, so no canary can report protocol v1. Against today's runtimes the
+  capability probe answers legacy and every surface behaves exactly as shipped.
 
 ## Status (release-prep re-audit, 2026-08-11)
 
