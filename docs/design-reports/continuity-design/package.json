@@ -1,0 +1,16 @@
+{
+  "name": "continuity-design-report",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "slidev slides.md --open false",
+    "build": "slidev build slides.md",
+    "export": "slidev export slides.md"
+  },
+  "dependencies": {
+    "@slidev/cli": "^52.19.0",
+    "@slidev/theme-seriph": "^0.25.0",
+    "@slidev/theme-default": "^0.25.0",
+    "vue": "^3.5.0"
+  }
+}
