@@ -56,9 +56,11 @@ if [ "$(node -v 2>/dev/null)" != "v$WANT" ]; then
 fi
 
 export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm_config_arch=x64
+export OS_NAME=linux VSCODE_ARCH=x64 # the workflow's job-level env block, verbatim
 retry_ci() { for i in 1 2 3 4 5; do npm ci && return; [ "$i" = 5 ] && { echo "npm ci failed too many times" >&2; exit 1; }; echo "npm ci failed ($i), retrying…"; done; }
 ( cd build && retry_ci )
-source ./build/azure-pipelines/linux/setup-env.sh
+# setup-env.sh is written for CI's plain bash — it reads vars that may be unset, so -u pauses here.
+set +u; source ./build/azure-pipelines/linux/setup-env.sh; set -u
 node build/npm/preinstall.ts # patches v8 headers BEFORE root deps, per the workflow
 retry_ci
 
