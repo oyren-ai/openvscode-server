@@ -37,12 +37,19 @@ sudo apt-get update -qq
 sudo apt-get install -y -qq build-essential g++ python3 pkg-config jq \
   libxkbfile-dev libkrb5-dev libgtk-3-0 libgbm1 # no xvfb: tests are skipped, same as the workflow
 
-# Node must match .nvmrc (native modules compile against its headers).
+# Node must match .nvmrc (native modules compile against its headers). Installed as the official
+# tarball into /opt/node — NOT nvm: nvm.sh misbehaves silently under `set -u` (observed: sourced
+# fine, installed nothing, and the script marched on into `npm: command not found`).
 WANT="$(cat .nvmrc)"
+[ -x "/opt/node-v$WANT/bin/node" ] && export PATH="/opt/node-v$WANT/bin:$PATH"
 if [ "$(node -v 2>/dev/null)" != "v$WANT" ]; then
-  export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
-  [ -s "$NVM_DIR/nvm.sh" ] || { echo "node v$WANT required (have: $(node -v 2>/dev/null || echo none)) and nvm is absent" >&2; exit 1; }
-  . "$NVM_DIR/nvm.sh" && nvm install "$WANT" && nvm use "$WANT"
+  echo "installing node v$WANT to /opt/node-v$WANT…"
+  curl -fsSL "https://nodejs.org/dist/v${WANT}/node-v${WANT}-linux-x64.tar.xz" -o /tmp/node.tar.xz
+  $SUDO mkdir -p "/opt/node-v$WANT"
+  $SUDO tar -xJf /tmp/node.tar.xz -C "/opt/node-v$WANT" --strip-components=1
+  rm -f /tmp/node.tar.xz
+  export PATH="/opt/node-v$WANT/bin:$PATH"
+  [ "$(node -v)" = "v$WANT" ] || { echo "node install failed: $(node -v 2>&1)" >&2; exit 1; }
 fi
 
 export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm_config_arch=x64
