@@ -18,6 +18,9 @@ REPO="oyren-ai/openvscode-server"
 
 # The repo must sit one level below the build root: gulpfile.reh.ts derives BUILD_ROOT from the
 # repo's PARENT, and the reh output lands there.
+# set -e safe both as root (SUDO empty) and as a sudoer.
+if [ "$(id -u)" = 0 ]; then SUDO=""; else SUDO="sudo"; fi
+
 BUILD_ROOT="${BUILD_ROOT:-$HOME/oyren-server-build}"
 mkdir -p "$BUILD_ROOT"
 cd "$BUILD_ROOT"
