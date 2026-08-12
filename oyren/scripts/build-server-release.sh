@@ -37,8 +37,9 @@ if ! free -g | awk '/^Mem|^Swap/ {t+=$2} END {exit (t>=20?0:1)}'; then
 fi
 
 sudo apt-get update -qq
-sudo apt-get install -y -qq build-essential g++ python3 pkg-config jq \
+sudo apt-get install -y -qq build-essential g++ python3 python-is-python3 pkg-config jq \
   libxkbfile-dev libkrb5-dev libgtk-3-0 libgbm1 # no xvfb: tests are skipped, same as the workflow
+# python-is-python3: setup-env.sh calls bare `python`; GitHub runner images alias it, stock Ubuntu doesn't.
 
 # Node must match .nvmrc (native modules compile against its headers). Installed as the official
 # tarball into /opt/node — NOT nvm: nvm.sh misbehaves silently under `set -u` (observed: sourced
