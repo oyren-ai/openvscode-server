@@ -1,0 +1,28 @@
+{
+  "name": "oyren-preview",
+  "displayName": "Oyren Preview",
+  "description": "Preview a locally-running dev server inside the editor via the built-in Simple Browser.",
+  "version": "0.1.0",
+  "publisher": "oyren",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "extensionKind": [
+    "workspace"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "oyren.preview.open",
+        "title": "Oyren: Open Preview",
+        "category": "Oyren"
+      }
+    ]
+  }
+}

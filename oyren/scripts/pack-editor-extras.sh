@@ -23,6 +23,7 @@ trap 'rm -rf "$OUT"' EXIT
 mkdir -p "$OUT/pack/extensions" "$OUT/pack/settings" "$OUT/pack/scripts"
 cp -R "$ROOT/extensions/oyren-agent-extension" "$OUT/pack/extensions/"
 cp -R "$ROOT/extensions/oyren-welcome-extension" "$OUT/pack/extensions/"
+cp -R "$ROOT/extensions/oyren-preview" "$OUT/pack/extensions/"
 cp "$ROOT/settings/machine-settings.json" "$OUT/pack/settings/"
 cp "$ROOT/settings/user-settings.json" "$OUT/pack/settings/"
 cp "$ROOT/settings/product.overrides.json" "$OUT/pack/settings/"

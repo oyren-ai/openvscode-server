@@ -11,7 +11,10 @@ This fork ships the Oyren Editor in two layers:
    snapshot or server build —
    - `extensions/` — first-party extensions installed as built-ins:
      `oyren-agent-extension` (the Chat view's default participant + one chat session type per
-     CLI agent) and `oyren-welcome-extension` (the onboarding walkthrough).
+     CLI agent), `oyren-welcome-extension` (the onboarding walkthrough), and `oyren-preview`
+     (a command + status bar item that opens the built-in Simple Browser pointed at
+     `http://localhost:<port>` — a mini in-editor preview of the session's own dev server, no
+     public route needed).
    - `settings/` — seeded editor settings (`machine-settings.json` every boot,
      `user-settings.json` once) and `product.overrides.json`, the branding merged into the
      server's `product.json`.
