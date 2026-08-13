@@ -22,6 +22,7 @@ import type { IWorkbenchConstructionOptions, IWorkspace, IWorkspaceProvider } fr
 import { AuthenticationSessionInfo } from '../../../workbench/services/authentication/browser/authenticationService.js';
 import type { IURLCallbackProvider } from '../../../workbench/services/url/browser/urlService.js';
 import { create } from '../../../workbench/workbench.web.main.internal.js';
+import { createOyrenExternalUriResolver } from './oyrenExternalUri.js';
 
 interface ISecretStorageCrypto {
 	seal(data: string): Promise<string>;
@@ -618,6 +619,7 @@ function readCookie(name: string): string | undefined {
 		...config,
 		windowIndicator: config.windowIndicator ?? { label: '$(remote)', tooltip: `${product.nameShort} Web` },
 		settingsSyncOptions: config.settingsSyncOptions ? { enabled: config.settingsSyncOptions.enabled, } : undefined,
+		resolveExternalUri: createOyrenExternalUriResolver(config.serverBasePath),
 		workspaceProvider: WorkspaceProvider.create(config),
 		urlCallbackProvider: new LocalStorageURLCallbackProvider(config.callbackRoute),
 		secretStorageProvider: config.remoteAuthority && !secretStorageKeyPath

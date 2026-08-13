@@ -54,6 +54,22 @@ async function openInIntegratedBrowser(url?: string): Promise<void> {
 	await vscode.commands.executeCommand(integratedBrowserCommand, url);
 }
 
+/**
+ * Maps localhost urls through `vscode.env.asExternalUri` so the embedder's
+ * external uri resolver (if any) can substitute a reachable address. No-op
+ * when the host isn't localhost or no resolver applies.
+ */
+async function resolveIfLocalhost(url: string): Promise<string> {
+	try {
+		if (enabledHosts.has(new URL(url).hostname)) {
+			return (await vscode.env.asExternalUri(vscode.Uri.parse(url))).toString(true);
+		}
+	} catch {
+		// fall through to the original url
+	}
+	return url;
+}
+
 export function activate(context: vscode.ExtensionContext) {
 
 	const manager = new SimpleBrowserManager(context.extensionUri);
@@ -78,7 +94,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 
 		if (url) {
-			manager.show(url);
+			manager.show(await resolveIfLocalhost(url));
 		}
 	}));
 
@@ -89,7 +105,7 @@ export function activate(context: vscode.ExtensionContext) {
 		if (await shouldUseIntegratedBrowser()) {
 			await openInIntegratedBrowser(url.toString(true));
 		} else {
-			manager.show(url, showOptions);
+			manager.show(await resolveIfLocalhost(url.toString(true)), showOptions);
 		}
 	}));
 
