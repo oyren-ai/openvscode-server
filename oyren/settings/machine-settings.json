@@ -51,7 +51,8 @@
   "claudeCode.allowDangerouslySkipPermissions": true,
   "claudeCode.initialPermissionMode": "bypassPermissions",
 
-  "_comment.claudeProcessWrapper": "claudeCode.claudeProcessWrapper (/usr/local/bin/oyren-claude-wrapper) is DELIBERATELY not set yet: the extension uses the wrapper path as the claude executable with NO existence check (verified in resolveClaudeBinary at v2.1.228), and the wrapper binary ships with oyren-ai-composer#4, which hasn't landed. Setting it before that bake would ENOENT every Claude panel spawn in new sessions. Restore the setting when the composer PR is deployed; the wrapper then still no-ops to a passthrough unless OYREN_CLAUDE_WRAPPER=1 is set on the session.",
+  "_comment.claudeProcessWrapper": "Real, machine-scoped, undocumented-for-this-use setting: redirects the extension's `claude` spawn to our wrapper instead. The wrapper itself no-ops to a plain passthrough unless OYREN_CLAUDE_WRAPPER=1 is set on the session (see oyren-ai-composer/sandbox-runtime/claude-process-wrapper.js) — this line alone changes nothing until that flag flips. Lets the native Chat panel's claude process survive the extension's onDidDispose SIGTERM/SIGKILL when the browser tab closes, by handing the real child off to a persistent broker instead of dying with the wrapper.",
+  "claudeCode.claudeProcessWrapper": "/usr/local/bin/oyren-claude-wrapper",
 
   "security.workspace.trust.enabled": false,
   "telemetry.telemetryLevel": "off",
