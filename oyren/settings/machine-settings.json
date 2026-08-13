@@ -20,6 +20,9 @@
   "_comment.chat": "chat.agent.enabled keeps Agent mode in the mode picker — the panel OPENS in Agent mode and our participant handles all three modes. chat.commandCenter.enabled was removed: that key does not exist at 1.109 (the successor is chat.agentsControl.enabled, left at its default).",
   "chat.agent.enabled": true,
 
+  "_comment.sendElementsToChat": "The Simple Browser overlay (src/vs/workbench/contrib/chat/browser/attachments/simpleBrowserEditorOverlay.ts) tries to attach a browser-elements debug session on every preview open; that can never succeed in this web deployment, so it toasts 'Please reopen the preview.' every time. Default is true; false removes the overlay at the source (the controller returns before wiring anything).",
+  "chat.sendElementsToChat.enabled": false,
+
   "_comment.terminalProfiles": "The editor's terminal dropdown IS the agent picker. Every agent CLI is baked into the snapshot, so any of them starts without a re-launch. 'Agent' attaches to the tmux session Oyren's own web terminal shows — same conversation, live, in both places. The named profiles start a SEPARATE agent that shares the files but not the chat, and only the agent this session launched with is guaranteed to have credentials.",
   "terminal.integrated.defaultProfile.linux": "Agent",
   "terminal.integrated.profiles.linux": {
@@ -50,6 +53,9 @@
   "_comment.claudeCode": "The sandbox already runs claude with everything allowed (sandbox-runtime seeds ~/.claude/settings.json to bypassPermissions + IS_SANDBOX=1), but the Claude Code EXTENSION's mode picker never reads that file — it reads these two settings and otherwise defaults to Manual, telling the user the opposite of the truth. BOTH keys are required: without the boolean the extension silently downgrades bypassPermissions back to Manual. Machine scope on purpose — re-seeded from extras every boot, so the visible default matches the actual policy even though a user can still switch modes per conversation.",
   "claudeCode.allowDangerouslySkipPermissions": true,
   "claudeCode.initialPermissionMode": "bypassPermissions",
+
+  "_comment.claudeLogin": "The Claude Code panel's Sign In runs an OAuth loopback callback on a random remote port — it can never complete from the user's browser (the redirect lands on the USER'S localhost). Credentials are pre-seeded at ~/.claude/.credentials.json, so the prompt is a dead end that looks like a bug. The extension's own setting exists for exactly this (verified in anthropic.claude-code 2.1.222 contributes.configuration).",
+  "claudeCode.disableLoginPrompt": true,
 
   "_comment.claudeProcessWrapper": "claudeCode.claudeProcessWrapper (/usr/local/bin/oyren-claude-wrapper) is DELIBERATELY not set: the extension uses the wrapper path as the claude executable with NO existence check (verified in resolveClaudeBinary at v2.1.228), so setting it on images without the wrapper ENOENTs every Chat panel spawn. It WAS restored on 2026-08-13 once the wrapper shipped (composer snapshot 241007658, OYREN_CLAUDE_WRAPPER=1 baked) and prod sessions immediately hit 'Subprocess initialization did not complete within 60000ms' in the Chat panel \u2014 the broker relay has never been verified end-to-end against the real extension. Do not restore until the wrapper+broker path is proven in a live session WITH the extension (not just the unit suite); see oyren-ai-composer sandbox-runtime/claude-process-wrapper.js.",
 

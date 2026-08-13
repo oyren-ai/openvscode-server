@@ -2,7 +2,7 @@
   "name": "oyren-preview",
   "displayName": "Oyren Preview",
   "description": "Preview a locally-running dev server inside the editor via the built-in Simple Browser.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "oyren",
   "private": true,
   "license": "UNLICENSED",
