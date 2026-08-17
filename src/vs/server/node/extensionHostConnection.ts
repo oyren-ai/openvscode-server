@@ -66,6 +66,11 @@ export async function buildUserEnvironment(startParamsEnv: { [key: string]: stri
 	env.VSCODE_RECONNECTION_GRACE_TIME = String(environmentService.reconnectionGraceTime);
 	logService.trace(`[reconnection-grace-time] Setting VSCODE_RECONNECTION_GRACE_TIME env var for extension host: ${environmentService.reconnectionGraceTime}ms (${Math.floor(environmentService.reconnectionGraceTime / 1000)}s)`);
 
+	if (environmentService.persistExtHost) {
+		env.VSCODE_PERSIST_EXTHOST = '1';
+		logService.trace(`[persist-exthost] Setting VSCODE_PERSIST_EXTHOST env var for extension host: disconnect timers disabled.`);
+	}
+
 	removeNulls(env);
 	return env;
 }

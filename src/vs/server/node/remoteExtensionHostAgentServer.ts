@@ -65,6 +65,7 @@ class RemoteExtensionHostAgentServer extends Disposable implements IServerAPI {
 	private readonly _webClientServer: WebClientServer | null;
 	private readonly _webEndpointOriginChecker: WebEndpointOriginChecker;
 	private readonly _reconnectionGraceTime: number;
+	private readonly _persistExtHost: boolean;
 
 	private readonly _serverBasePath: string | undefined;
 	private readonly _serverProductPath: string;
@@ -101,6 +102,7 @@ class RemoteExtensionHostAgentServer extends Disposable implements IServerAPI {
 		);
 		this._logService.info(`Extension host agent started.`);
 		this._reconnectionGraceTime = this._environmentService.reconnectionGraceTime;
+		this._persistExtHost = this._environmentService.persistExtHost;
 
 		this._waitThenShutdown(true);
 	}
@@ -368,13 +370,17 @@ class RemoteExtensionHostAgentServer extends Disposable implements IServerAPI {
 				// We have received a new connection.
 				// This indicates that the server owner has connectivity.
 				// Therefore we will shorten the reconnection grace period for disconnected connections!
-				for (const key in this._managementConnections) {
-					const managementConnection = this._managementConnections[key];
-					managementConnection.shortenReconnectionGraceTimeIfNecessary();
-				}
-				for (const key in this._extHostConnections) {
-					const extHostConnection = this._extHostConnections[key];
-					extHostConnection.shortenReconnectionGraceTimeIfNecessary();
+				// [persist-exthost] …unless hosts are persisted: reopening the session must never
+				// collapse a parked host's lifetime, so the shortening is skipped entirely.
+				if (!this._persistExtHost) {
+					for (const key in this._managementConnections) {
+						const managementConnection = this._managementConnections[key];
+						managementConnection.shortenReconnectionGraceTimeIfNecessary();
+					}
+					for (const key in this._extHostConnections) {
+						const extHostConnection = this._extHostConnections[key];
+						extHostConnection.shortenReconnectionGraceTimeIfNecessary();
+					}
 				}
 
 				state = State.Done;

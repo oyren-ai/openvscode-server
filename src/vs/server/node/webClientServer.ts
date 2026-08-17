@@ -367,7 +367,10 @@ export class WebClientServer {
 			folderUri: resolveWorkspaceURI(this._environmentService.args['default-folder']),
 			workspaceUri: resolveWorkspaceURI(this._environmentService.args['default-workspace']),
 			productConfiguration,
-			callbackRoute: callbackRoute
+			callbackRoute: callbackRoute,
+			// [persist-exthost] Tells the workbench to never send disconnect goodbyes — a closing
+			// tab must look like a socket drop so the server keeps the extension host running.
+			persistRemoteExtHost: this._environmentService.persistExtHost ? true : undefined
 		};
 
 		const cookies = cookie.parse(req.headers.cookie || '');

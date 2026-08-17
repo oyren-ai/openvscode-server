@@ -88,6 +88,7 @@ export const serverOptions: OptionDescriptions<Required<ServerParsedArgs>> = {
 	'use-host-proxy': { type: 'boolean' },
 	'without-browser-env-var': { type: 'boolean' },
 	'reconnection-grace-time': { type: 'string', cat: 'o', args: 'seconds', description: nls.localize('reconnection-grace-time', "Override the reconnection grace time window in seconds. Defaults to 10800 (3 hours).") },
+	'persist-exthost': { type: 'boolean', cat: 'o', description: nls.localize('persist-exthost', "Keep remote extension hosts running after their window disconnects: client goodbyes are suppressed and no disconnect timers are scheduled, so background work (e.g. coding agents) survives a closed tab. Hosts then live until the server stops.") },
 
 	/* ----- server cli ----- */
 
@@ -218,6 +219,7 @@ export interface ServerParsedArgs {
 	'use-host-proxy'?: boolean;
 	'without-browser-env-var'?: boolean;
 	'reconnection-grace-time'?: string;
+	'persist-exthost'?: boolean;
 
 	/* ----- server cli ----- */
 	help: boolean;
@@ -236,6 +238,7 @@ export interface IServerEnvironmentService extends INativeEnvironmentService {
 	readonly mcpResource: URI;
 	readonly args: ServerParsedArgs;
 	readonly reconnectionGraceTime: number;
+	readonly persistExtHost: boolean;
 }
 
 export class ServerEnvironmentService extends NativeEnvironmentService implements IServerEnvironmentService {
@@ -248,6 +251,14 @@ export class ServerEnvironmentService extends NativeEnvironmentService implement
 	override get args(): ServerParsedArgs { return super.args as ServerParsedArgs; }
 	@memoize
 	get reconnectionGraceTime(): number { return parseGraceTime(this.args['reconnection-grace-time'], ProtocolConstants.ReconnectionGraceTime); }
+	@memoize
+	get persistExtHost(): boolean {
+		const enabled = this.args['persist-exthost'] === true;
+		if (enabled) {
+			console.log(`[persist-exthost] Enabled: extension hosts survive client disconnects indefinitely.`);
+		}
+		return enabled;
+	}
 }
 
 function parseGraceTime(rawValue: string | undefined, fallback: number): number {

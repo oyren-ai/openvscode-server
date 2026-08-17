@@ -214,6 +214,13 @@ function _createExtHostProtocol(): Promise<IMessagePassingProtocol> {
 
 			const reconnectionGraceTime = readReconnectionValue('VSCODE_RECONNECTION_GRACE_TIME', ProtocolConstants.ReconnectionGraceTime);
 			const reconnectionShortGraceTime = reconnectionGraceTime > 0 ? Math.min(ProtocolConstants.ReconnectionShortGraceTime, reconnectionGraceTime) : 0;
+			// [persist-exthost] With the flag on, a lost renderer must never kill this process: no
+			// disconnect timers are scheduled and a stray Disconnect frame is ignored — background
+			// work (e.g. a coding agent mid-turn) runs on until the machine itself goes away.
+			const persistExtHost = process.env['VSCODE_PERSIST_EXTHOST'] === '1';
+			if (persistExtHost) {
+				console.log(`[persist-exthost] Extension host: disconnect timers disabled; surviving client disconnects.`);
+			}
 			const disconnectRunner1 = new ProcessTimeRunOnceScheduler(() => onTerminate('renderer disconnected for too long (1)'), reconnectionGraceTime);
 			const disconnectRunner2 = new ProcessTimeRunOnceScheduler(() => onTerminate('renderer disconnected for too long (2)'), reconnectionShortGraceTime);
 
@@ -240,19 +247,35 @@ function _createExtHostProtocol(): Promise<IMessagePassingProtocol> {
 						protocol.sendResume();
 					} else {
 						clearTimeout(timer);
-						protocol = new PersistentProtocol({ socket, initialChunk: initialDataChunk });
+						// [persist-exthost] A parked host streams into a void — cap the unack buffer
+						// (64 MiB) so hours of agent output can't OOM the machine.
+						protocol = new PersistentProtocol({ socket, initialChunk: initialDataChunk, outgoingUnackByteCap: persistExtHost ? 64 * 1024 * 1024 : undefined });
 						protocol.sendResume();
-						protocol.onDidDispose(() => onTerminate('renderer disconnected'));
+						protocol.onDidDispose(() => {
+							if (persistExtHost) {
+								console.log(`[persist-exthost] Extension host: renderer sent a disconnect — staying alive.`);
+								return;
+							}
+							onTerminate('renderer disconnected');
+						});
 						resolve(protocol);
 
 						// Wait for rich client to reconnect
 						protocol.onSocketClose(() => {
 							// The socket has closed, let's give the renderer a certain amount of time to reconnect
+							if (persistExtHost) {
+								console.log(`[persist-exthost] Extension host: socket closed — parked, no disconnect timer.`);
+								return;
+							}
 							disconnectRunner1.schedule();
 						});
 					}
 				}
 				if (msg && msg.type === 'VSCODE_EXTHOST_IPC_REDUCE_GRACE_TIME') {
+					if (persistExtHost) {
+						// [persist-exthost] Never shorten a parked host's lifetime.
+						return;
+					}
 					if (disconnectRunner2.isScheduled()) {
 						// we are disconnected and already running the short reconnection timer
 						return;

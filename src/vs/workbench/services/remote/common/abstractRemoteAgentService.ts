@@ -7,6 +7,7 @@ import { Disposable } from '../../../../base/common/lifecycle.js';
 import { IChannel, IServerChannel, getDelayedChannel, IPCLogger } from '../../../../base/parts/ipc/common/ipc.js';
 import { Client } from '../../../../base/parts/ipc/common/ipc.net.js';
 import { IWorkbenchEnvironmentService } from '../../environment/common/environmentService.js';
+import { isPersistRemoteExtHost } from './persistRemoteExtHost.js';
 import { connectRemoteAgentManagement, IConnectionOptions, ManagementPersistentConnection, PersistentConnectionEvent } from '../../../../platform/remote/common/remoteAgentConnection.js';
 import { IExtensionHostExitInfo, IRemoteAgentConnection, IRemoteAgentService } from './remoteAgentService.js';
 import { IRemoteAuthorityResolverService } from '../../../../platform/remote/common/remoteAuthorityResolver.js';
@@ -249,10 +250,18 @@ class RemoteAgentConnection extends Disposable implements IRemoteAgentConnection
 		connection.protocol.onDidDispose(() => {
 			connection.dispose();
 		});
-		this.end = () => {
-			connection.protocol.sendDisconnect();
-			return connection.protocol.drain();
-		};
+		if (isPersistRemoteExtHost(this._environmentService)) {
+			// [persist-exthost] The management channel must not announce departures either — a
+			// goodbye here tears down the whole remote session server-side. This also silences
+			// the last-resort goodbye in Client.dispose (same protocol instance).
+			connection.protocol.suppressOutgoingDisconnect();
+			this.end = () => Promise.resolve();
+		} else {
+			this.end = () => {
+				connection.protocol.sendDisconnect();
+				return connection.protocol.drain();
+			};
+		}
 		this._register(connection.onDidStateChange(e => this._onDidStateChange.fire(e)));
 		return connection.client;
 	}
