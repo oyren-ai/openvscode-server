@@ -12,7 +12,8 @@ import { AGENT_SESSION_DELETE_ACTION_ID, AGENT_SESSION_RENAME_ACTION_ID, AgentSe
 import { IChatService } from '../../common/chatService/chatService.js';
 import { ChatContextKeys } from '../../common/actions/chatContextKeys.js';
 import { IChatEditorOptions } from '../widgetHosts/editor/chatEditor.js';
-import { ChatViewId, IChatWidgetService } from '../chat.js';
+import { ChatViewId, ChatViewPaneTarget, IChatWidgetService } from '../chat.js';
+import { URI, UriComponents } from '../../../../../base/common/uri.js';
 import { ACTIVE_GROUP, AUX_WINDOW_GROUP, PreferredGroup, SIDE_GROUP } from '../../../../services/editor/common/editorService.js';
 import { IViewDescriptorService, ViewContainerLocation } from '../../../../common/views.js';
 import { getPartByLocation } from '../../../../services/views/browser/viewsService.js';
@@ -672,6 +673,33 @@ export class DeleteAllLocalSessionsAction extends Action2 {
 
 		// Remove from storage
 		await chatService.clearAllHistoryEntries();
+	}
+}
+
+/**
+ * [oyren] Open an existing chat session — local or contributed (`codex-cli:/<uuid>` etc.) — in the
+ * chat PANEL by resource. Every stock open path targets an editor or requires interactive context;
+ * this is the missing programmatic primitive the reattach glue (extras startup extension) uses to
+ * put the user back into the session that was active when their last window closed.
+ */
+export class OyrenOpenSessionInPanelAction extends Action2 {
+
+	static readonly id = 'oyren.chat.openSessionInPanel';
+
+	constructor() {
+		super({
+			id: OyrenOpenSessionInPanelAction.id,
+			title: localize2('oyren.chat.openSessionInPanel.label', "Open Chat Session in Panel"),
+			f1: false
+		});
+	}
+
+	async run(accessor: ServicesAccessor, context?: { resource?: UriComponents }): Promise<void> {
+		if (!context?.resource) {
+			return;
+		}
+		const chatWidgetService = accessor.get(IChatWidgetService);
+		await chatWidgetService.openSession(URI.revive(context.resource), ChatViewPaneTarget);
 	}
 }
 

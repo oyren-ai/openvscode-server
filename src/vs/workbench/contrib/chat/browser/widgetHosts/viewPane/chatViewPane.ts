@@ -250,7 +250,7 @@ export class ChatViewPane extends ViewPane implements IViewWelcomeDelegate {
 			if (!this._widget?.viewModel && !this.restoringSession) {
 				const sessionResource = this.getTransferredOrPersistedSessionInfo();
 				this.restoringSession =
-					(sessionResource ? this.chatService.getOrRestoreSession(sessionResource) : Promise.resolve(undefined)).then(async modelRef => {
+					(sessionResource ? this.restoreSessionRef(sessionResource) : Promise.resolve(undefined)).then(async modelRef => {
 						if (!this._widget) {
 							return; // renderBody has not been called yet
 						}
@@ -664,8 +664,29 @@ export class ChatViewPane extends ViewPane implements IViewWelcomeDelegate {
 
 	private async applyModel(): Promise<void> {
 		const sessionResource = this.getTransferredOrPersistedSessionInfo();
-		const modelRef = sessionResource ? await this.chatService.getOrRestoreSession(sessionResource) : undefined;
+		const modelRef = sessionResource ? await this.restoreSessionRef(sessionResource) : undefined;
 		await this.showModel(modelRef);
+	}
+
+	/**
+	 * [oyren] Restore a persisted session of ANY type. A contributed session's scheme carries its
+	 * type (e.g. `codex-cli:/<uuid>`), and `getOrRestoreSession` only understands local schemes —
+	 * it THROWS for contributed ones, which silently broke restoring the last panel session on
+	 * reload (the fork persists the full resource exactly for this). Route through
+	 * `loadSessionForResource` (the same path {@link loadSession} uses), activating the content
+	 * provider first, and fall back to a fresh session instead of an unhandled rejection.
+	 */
+	private async restoreSessionRef(sessionResource: URI): Promise<IChatModelReference | undefined> {
+		try {
+			const sessionType = getChatSessionType(sessionResource);
+			if (sessionType !== localChatSessionType) {
+				await this.chatSessionsService.canResolveChatSession(sessionResource);
+			}
+			return await this.chatService.loadSessionForResource(sessionResource, ChatAgentLocation.Chat, CancellationToken.None);
+		} catch (error) {
+			this.logService.warn(`[oyren] Failed to restore chat session '${sessionResource.toString()}'; starting fresh.`, error);
+			return undefined;
+		}
 	}
 
 	private async showModel(modelRef?: IChatModelReference | undefined, startNewSession = true): Promise<IChatModel | undefined> {

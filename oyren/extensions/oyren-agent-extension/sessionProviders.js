@@ -17,6 +17,7 @@ const { createItemLister } = require("./sessionItems")
 const { createContentResolver } = require("./sessionContent")
 const { makeHandler } = require("./turnHandler")
 const { KINDS, durablePath } = require("./sessionResource")
+const { recordLastSession } = require("./lastSessionStore")
 
 // The pinned-1.109 pieces the pure modules must not require. Statuses tolerate the proposal being
 // absent (status is optional on an item); the turn constructors are checked at use in mapCtx.api.
@@ -32,6 +33,10 @@ function registerSessionProviders(context) {
   // ONE state instance for the whole extension: busy/model/cursor keys are durable session UUIDs
   // (globally unique), and the item cache is keyed by kind — nothing here can alias across kinds.
   const state = createSessionState()
+  // Server-side "most recently touched session" record, for cross-device reattach (reattach.js).
+  // globalStorageUri lives on the droplet; globalState would be browser IndexedDB and lie here.
+  const storageDir = context.globalStorageUri && context.globalStorageUri.fsPath
+  const touch = (resource) => { if (storageDir) recordLastSession(storageDir, String(resource)) }
   for (const { type } of KINDS) {
     try {
       // LEGACY calls for the session's own kind carry no ?agent= — the primary engine IS that agent
@@ -68,15 +73,19 @@ function registerSessionProviders(context) {
       // provider — see sessionOptions.js. Opening the session is what loads the list.
       const options = createSessionOptions(client, type, { state, sessionClient })
       context.subscriptions.push(...options.emitters)
+      const contentResolver = createContentResolver({
+        kind: type, sessionClient, state, options, handler, mapCtx,
+        port: client.port, fireItemsChanged: () => itemsChanged.fire(),
+      })
       context.subscriptions.push(vscode.chat.registerChatSessionContentProvider(type, {
         onDidChangeChatSessionProviderOptions: options.onDidChangeProviderOptions,
         onDidChangeChatSessionOptions: options.onDidChangeSessionOptions,
         provideChatSessionProviderOptions: options.provideProviderOptions,
         provideHandleOptionsChange: options.handleOptionsChange,
-        provideChatSessionContent: createContentResolver({
-          kind: type, sessionClient, state, options, handler, mapCtx,
-          port: client.port, fireItemsChanged: () => itemsChanged.fire(),
-        }),
+        provideChatSessionContent: (resource, cancelToken) => {
+          touch(resource) // opening a session IS touching it (untitled resources are filtered)
+          return contentResolver(resource, cancelToken)
+        },
       }, participant, { supportsInterruptions: true }))
     } catch (err) {
       console.error(`oyren-agent: session provider for ${type} failed: ${err && err.message}`)

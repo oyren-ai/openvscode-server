@@ -16,7 +16,7 @@ import { IAgentSessionsService, AgentSessionsService } from './agentSessionsServ
 import { LocalAgentsSessionsProvider } from './localAgentSessionsProvider.js';
 import { registerWorkbenchContribution2, WorkbenchPhase } from '../../../../common/contributions.js';
 import { ISubmenuItem, MenuId, MenuRegistry, registerAction2 } from '../../../../../platform/actions/common/actions.js';
-import { ArchiveAgentSessionAction, ArchiveAgentSessionSectionAction, UnarchiveAgentSessionAction, OpenAgentSessionInEditorGroupAction, OpenAgentSessionInNewEditorGroupAction, OpenAgentSessionInNewWindowAction, ShowAgentSessionsSidebar, HideAgentSessionsSidebar, ToggleAgentSessionsSidebar, RefreshAgentSessionsViewerAction, FindAgentSessionInViewerAction, MarkAgentSessionUnreadAction, MarkAgentSessionReadAction, FocusAgentSessionsAction, SetAgentSessionsOrientationStackedAction, SetAgentSessionsOrientationSideBySideAction, PickAgentSessionAction, ArchiveAllAgentSessionsAction, MarkAllAgentSessionsReadAction, RenameAgentSessionAction, DeleteAgentSessionAction, DeleteAllLocalSessionsAction, MarkAgentSessionSectionReadAction, ToggleShowAgentSessionsAction, UnarchiveAgentSessionSectionAction } from './agentSessionsActions.js';
+import { ArchiveAgentSessionAction, ArchiveAgentSessionSectionAction, UnarchiveAgentSessionAction, OpenAgentSessionInEditorGroupAction, OpenAgentSessionInNewEditorGroupAction, OpenAgentSessionInNewWindowAction, OyrenOpenSessionInPanelAction, ShowAgentSessionsSidebar, HideAgentSessionsSidebar, ToggleAgentSessionsSidebar, RefreshAgentSessionsViewerAction, FindAgentSessionInViewerAction, MarkAgentSessionUnreadAction, MarkAgentSessionReadAction, FocusAgentSessionsAction, SetAgentSessionsOrientationStackedAction, SetAgentSessionsOrientationSideBySideAction, PickAgentSessionAction, ArchiveAllAgentSessionsAction, MarkAllAgentSessionsReadAction, RenameAgentSessionAction, DeleteAgentSessionAction, DeleteAllLocalSessionsAction, MarkAgentSessionSectionReadAction, ToggleShowAgentSessionsAction, UnarchiveAgentSessionSectionAction } from './agentSessionsActions.js';
 import { AgentSessionsQuickAccessProvider, AGENT_SESSIONS_QUICK_ACCESS_PREFIX } from './agentSessionsQuickAccess.js';
 import { AuxiliaryBarMaximizedContext } from '../../../../common/contextkeys.js';
 
@@ -39,6 +39,7 @@ registerAction2(MarkAgentSessionReadAction);
 registerAction2(OpenAgentSessionInNewWindowAction);
 registerAction2(OpenAgentSessionInEditorGroupAction);
 registerAction2(OpenAgentSessionInNewEditorGroupAction);
+registerAction2(OyrenOpenSessionInPanelAction);
 registerAction2(RefreshAgentSessionsViewerAction);
 registerAction2(FindAgentSessionInViewerAction);
 registerAction2(ShowAgentSessionsSidebar);
