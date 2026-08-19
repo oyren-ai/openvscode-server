@@ -40,7 +40,7 @@ export abstract class AbstractRemoteAgentService extends Disposable implements I
 	) {
 		super();
 		if (this._environmentService.remoteAuthority) {
-			this._connection = this._register(new RemoteAgentConnection(this._environmentService.remoteAuthority, productService.commit, productService.quality, this.remoteSocketFactoryService, this._remoteAuthorityResolverService, signService, this._logService));
+			this._connection = this._register(new RemoteAgentConnection(this._environmentService.remoteAuthority, productService.commit, productService.quality, this.remoteSocketFactoryService, this._remoteAuthorityResolverService, signService, this._logService, this._environmentService));
 		} else {
 			this._connection = null;
 		}
@@ -167,7 +167,8 @@ class RemoteAgentConnection extends Disposable implements IRemoteAgentConnection
 		private readonly _remoteSocketFactoryService: IRemoteSocketFactoryService,
 		private readonly _remoteAuthorityResolverService: IRemoteAuthorityResolverService,
 		private readonly _signService: ISignService,
-		private readonly _logService: ILogService
+		private readonly _logService: ILogService,
+		private readonly _environmentService: IWorkbenchEnvironmentService
 	) {
 		super();
 		this.remoteAuthority = remoteAuthority;
@@ -251,6 +252,7 @@ class RemoteAgentConnection extends Disposable implements IRemoteAgentConnection
 			connection.dispose();
 		});
 		if (isPersistRemoteExtHost(this._environmentService)) {
+			// allow-any-unicode-next-line
 			// [persist-exthost] The management channel must not announce departures either — a
 			// goodbye here tears down the whole remote session server-side. This also silences
 			// the last-resort goodbye in Client.dispose (same protocol instance).
