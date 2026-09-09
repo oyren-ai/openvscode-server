@@ -3,6 +3,7 @@ const { createClient } = require("./agentClient")
 const { makeHandler } = require("./turnHandler")
 const { createModelProvider } = require("./modelProvider")
 const { registerSessionProviders } = require("./sessionProviders")
+const { reopenOnStartup } = require("./reattach")
 
 /**
  * The production successor to oyren-chat-probe: VS Code's built-in Chat view, backed by the sandbox
@@ -42,6 +43,10 @@ function activate(context) {
 
   // The agent-type dropdown: one chat session per CLI agent, on our patched build.
   registerSessionProviders(context)
+
+  // Reattach: put a fresh window (any browser/device) back into the last durable session — the
+  // fork's own chat via the recorded resource, the Claude Code panel via its openLast command.
+  reopenOnStartup(context)
 }
 
 function deactivate() {}

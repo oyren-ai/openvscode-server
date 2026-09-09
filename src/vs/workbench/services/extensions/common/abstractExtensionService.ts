@@ -34,6 +34,7 @@ import { IRemoteExtensionsScannerService } from '../../../../platform/remote/com
 import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IWorkspaceContextService } from '../../../../platform/workspace/common/workspace.js';
 import { IWorkbenchEnvironmentService } from '../../environment/common/environmentService.js';
+import { isPersistRemoteExtHost } from '../../remote/common/persistRemoteExtHost.js';
 import { IExtensionFeaturesRegistry, Extensions as ExtensionFeaturesExtensions, IExtensionFeatureMarkdownRenderer, IRenderedData, } from '../../extensionManagement/common/extensionFeatures.js';
 import { IWorkbenchExtensionEnablementService, IWorkbenchExtensionManagementService } from '../../extensionManagement/common/extensionManagement.js';
 import { ExtensionDescriptionRegistryLock, ExtensionDescriptionRegistrySnapshot, IActivationEventsReader, LockableExtensionDescriptionRegistry } from './extensionDescriptionRegistry.js';
@@ -208,6 +209,11 @@ export abstract class AbstractExtensionService extends Disposable implements IEx
 		}));
 
 		this._register(this._lifecycleService.onWillShutdown(event => {
+			if (isPersistRemoteExtHost(this._environmentService)) {
+				// [persist-exthost] Send NO goodbyes: the closing window must look like a socket
+				// drop so the server keeps the remote extension host (and its agents) running.
+				return;
+			}
 			if (this._remoteAgentService.getConnection()) {
 				event.join(async () => {
 					// We need to disconnect the management connection before killing the local extension host.

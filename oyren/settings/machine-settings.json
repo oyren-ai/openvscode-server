@@ -20,6 +20,9 @@
   "_comment.chat": "chat.agent.enabled keeps Agent mode in the mode picker — the panel OPENS in Agent mode and our participant handles all three modes. chat.commandCenter.enabled was removed: that key does not exist at 1.109 (the successor is chat.agentsControl.enabled, left at its default).",
   "chat.agent.enabled": true,
 
+  "_comment.restoreLastPanelSession": "Reattach half 1 (same browser): the panel persists the full session resource per workspace, but the default-false setting wipes it on any fresh tab (only same-tab reloads count as ReloadedWindow). True makes reopening the codespace land in the SAME conversation — incl. contributed agent sessions, whose restore path the fork also fixes (loadSessionForResource). Half 2 (new browser/device) is the extension's reattach.js.",
+  "chat.restoreLastPanelSession": true,
+
   "_comment.sendElementsToChat": "The Simple Browser overlay (src/vs/workbench/contrib/chat/browser/attachments/simpleBrowserEditorOverlay.ts) tries to attach a browser-elements debug session on every preview open; that can never succeed in this web deployment, so it toasts 'Please reopen the preview.' every time. Default is true; false removes the overlay at the source (the controller returns before wiring anything).",
   "chat.sendElementsToChat.enabled": false,
 

@@ -23,6 +23,7 @@ import { ITelemetryService } from '../../../../platform/telemetry/common/telemet
 import { isLoggingOnly } from '../../../../platform/telemetry/common/telemetryUtils.js';
 import { IWorkspaceContextService, WorkbenchState } from '../../../../platform/workspace/common/workspace.js';
 import { IWorkbenchEnvironmentService } from '../../environment/common/environmentService.js';
+import { isPersistRemoteExtHost } from '../../remote/common/persistRemoteExtHost.js';
 import { IDefaultLogLevelsService } from '../../log/common/defaultLogLevels.js';
 import { parseExtensionDevOptions } from './extensionDevOptions.js';
 import { IExtensionHostInitData, MessageType, UIKind, createMessageOfType, isMessageOfType } from './extensionHostProtocol.js';
@@ -271,6 +272,13 @@ export class RemoteExtensionHost extends Disposable implements IExtensionHost {
 
 	async disconnect() {
 		if (this._protocol && !this._hasDisconnected) {
+			if (isPersistRemoteExtHost(this._environmentService)) {
+				// [persist-exthost] Neither Terminate nor a goodbye: the remote host must outlive
+				// this window and keep running whatever it was doing (a new window re-attaches at
+				// the session layer, never to this protocol).
+				this._hasDisconnected = true;
+				return;
+			}
 			this._protocol.send(createMessageOfType(MessageType.Terminate));
 			this._protocol.sendDisconnect();
 			this._hasDisconnected = true;

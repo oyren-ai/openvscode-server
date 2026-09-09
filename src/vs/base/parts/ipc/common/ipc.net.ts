@@ -801,6 +801,13 @@ export interface PersistentProtocolOptions {
 	 * Whether to send keep alive messages. Defaults to true.
 	 */
 	sendKeepAlive?: boolean;
+	/**
+	 * [persist-exthost] Cap (in bytes) on the outgoing unacknowledged-message buffer. Without a
+	 * connected peer nothing ever acks, so a long-parked sender would otherwise buffer forever.
+	 * On overflow the OLDEST unacked messages are dropped — replay integrity for a later reconnect
+	 * is deliberately sacrificed to bound memory. Undefined = unbounded (stock behavior).
+	 */
+	outgoingUnackByteCap?: number;
 }
 
 /**
@@ -816,6 +823,9 @@ export class PersistentProtocol implements IMessagePassingProtocol {
 	private _outgoingMsgId: number;
 	private _outgoingAckId: number;
 	private _outgoingAckTimeout: Timeout | null;
+	private readonly _outgoingUnackByteCap: number | undefined;
+	private _outgoingUnackByteSize: number;
+	private _outgoingUnackDroppedForCap: boolean;
 
 	private _incomingMsgId: number;
 	private _incomingAckId: number;
@@ -863,6 +873,9 @@ export class PersistentProtocol implements IMessagePassingProtocol {
 		this._outgoingMsgId = 0;
 		this._outgoingAckId = 0;
 		this._outgoingAckTimeout = null;
+		this._outgoingUnackByteCap = opts.outgoingUnackByteCap;
+		this._outgoingUnackByteSize = 0;
+		this._outgoingUnackDroppedForCap = false;
 
 		this._incomingMsgId = 0;
 		this._incomingAckId = 0;
@@ -919,6 +932,15 @@ export class PersistentProtocol implements IMessagePassingProtocol {
 			this._socketWriter.write(msg);
 			this._socketWriter.flush();
 		}
+	}
+
+	/**
+	 * [persist-exthost] Make every future {@link sendDisconnect} a no-op. A goodbye frame is the
+	 * remote side's cue to tear the extension host down immediately; suppressing it turns a closing
+	 * window into a plain socket drop, which the persisted server deliberately survives.
+	 */
+	suppressOutgoingDisconnect(): void {
+		this._didSendDisconnect = true;
 	}
 
 	sendPause(): void {
@@ -993,6 +1015,7 @@ export class PersistentProtocol implements IMessagePassingProtocol {
 				const first = this._outgoingUnackMsg.peek();
 				if (first && first.id <= msg.ack) {
 					// this message has been confirmed, remove it
+					this._outgoingUnackByteSize -= first.data.byteLength;
 					this._outgoingUnackMsg.pop();
 				} else {
 					break;
@@ -1073,6 +1096,22 @@ export class PersistentProtocol implements IMessagePassingProtocol {
 		this._incomingAckId = this._incomingMsgId;
 		const msg = new ProtocolMessage(ProtocolMessageType.Regular, myId, this._incomingAckId, buffer);
 		this._outgoingUnackMsg.push(msg);
+		this._outgoingUnackByteSize += msg.data.byteLength;
+		if (this._outgoingUnackByteCap !== undefined) {
+			// [persist-exthost] Bound the buffer: with no peer to ack, drop the oldest entries.
+			while (this._outgoingUnackByteSize > this._outgoingUnackByteCap) {
+				const oldest = this._outgoingUnackMsg.peek();
+				if (!oldest) {
+					break;
+				}
+				this._outgoingUnackByteSize -= oldest.data.byteLength;
+				this._outgoingUnackMsg.pop();
+				if (!this._outgoingUnackDroppedForCap) {
+					this._outgoingUnackDroppedForCap = true;
+					console.warn(`[persist-exthost] Unacknowledged-message buffer exceeded ${this._outgoingUnackByteCap} bytes; dropping oldest messages. A later reconnect of the ORIGINAL window cannot replay them.`);
+				}
+			}
+		}
 		if (!this._isReconnecting) {
 			this._socketWriter.write(msg);
 			this._recvAckCheck();
