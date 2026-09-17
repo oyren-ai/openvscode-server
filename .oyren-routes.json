@@ -1,0 +1,44 @@
+{
+  "routes": [
+    {
+      "prefix": "/bd",
+      "port": 3201,
+      "label": "Business Dashboard"
+    },
+    {
+      "prefix": "/devlab",
+      "port": 3301,
+      "label": "Development login and business dashboard"
+    },
+    {
+      "prefix": "/agents-hover",
+      "port": 3040,
+      "label": "Agents-first hero preview"
+    },
+    {
+      "prefix": "/agent-computer",
+      "port": 3100,
+      "label": "Oyr agent computer explainer"
+    },
+    {
+      "prefix": "/opencode-video",
+      "port": 3051,
+      "label": "AI agents cloud computer video"
+    },
+    {
+      "prefix": "/usecase-videos",
+      "port": 3052,
+      "label": "Twenty usecase videos"
+    },
+    {
+      "prefix": "/",
+      "port": 3000,
+      "label": "Sales main preview"
+    },
+    {
+      "prefix": "/videos-25",
+      "port": 3053,
+      "label": "25 usecase videos snapshot"
+    }
+  ]
+}
