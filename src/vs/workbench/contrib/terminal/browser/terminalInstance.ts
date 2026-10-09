@@ -1116,15 +1116,20 @@ export class TerminalInstance extends Disposable implements ITerminalInstance {
 			e.preventDefault();
 			e.stopImmediatePropagation();
 
+			if (file.size > 10 * 1024 * 1024) return;
 			const reader = new FileReader();
 			reader.onload = async () => {
 				const dataUrl = reader.result as string;
 				const base64 = dataUrl.split(',')[1];
 				try {
-					await this._commandService.executeCommand('oyren.terminal.pasteImage', {
+					const path = await this._commandService.executeCommand<string | undefined>('oyren.terminal.pasteImage', {
 						base64,
 						mime: file.type
 					});
+					if (path) {
+						const escapedPath = `'${path.replace(/'/g, "'\\''")}'`;
+						this.sendText(escapedPath, false);
+					}
 				} catch (err) {
 					this._logService.error('Oyren paste image failed', err);
 				}

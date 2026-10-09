@@ -52,25 +52,26 @@ function activate(context) {
       const userInfo = os.userInfo()
       const dir = process.env.OYREN_TERMINAL_PASTE_DIR || path.join(os.tmpdir(), "oyren-terminal-pastes-" + userInfo.username)
       
-      const MAX_BYTES = 10 * 1024 * 1024
-      const buf = Buffer.from(args.base64, 'base64')
-      if (buf.length > MAX_BYTES) return
+      const MAX_BYTES = 10 * 1024 * 1024;
+      // Rough base64 length check (4 chars = 3 bytes)
+      if (args.base64.length > (MAX_BYTES * 4 / 3) + 1000) return;
+      const buf = Buffer.from(args.base64, 'base64');
+      if (buf.length > MAX_BYTES) return;
       
       const EXT_BY_MIME = {
         "image/png": "png", "image/jpeg": "jpg", "image/jpg": "jpg",
-        "image/gif": "gif", "image/webp": "webp", "image/bmp": "bmp", "image/svg+xml": "svg"
+        "image/gif": "gif", "image/webp": "webp", "image/bmp": "bmp"
       }
-      const ext = EXT_BY_MIME[String(args.mime).toLowerCase()] || "png"
-      const name = `paste-${Date.now()}-${Math.floor(Math.random() * 1e6)}.${ext}`
-      const dest = path.join(dir, name)
+      // Exclude svg
+      const ext = EXT_BY_MIME[String(args.mime).toLowerCase()];
+      if (!ext) return;
       
-      fs.mkdirSync(dir, { recursive: true, mode: 0o700 })
-      fs.writeFileSync(dest, buf, { mode: 0o600 })
+      const name = `paste-${Date.now()}-${Math.floor(Math.random() * 1e6)}.${ext}`;
+      const dest = path.join(dir, name);
       
-      const term = vscode.window.activeTerminal
-      if (term) {
-        term.sendText(dest + " ", false)
-      }
+      fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+      fs.writeFileSync(dest, buf, { mode: 0o600 });
+      return dest;
     }))
   } catch (err) {
     console.error(`oyren-agent: pasteImage registration failed: ${err && err.message}`)
