@@ -1103,6 +1103,35 @@ export class TerminalInstance extends Disposable implements ITerminalInstance {
 			throw new Error('xterm elements not set after open');
 		}
 
+		this._register(dom.addDisposableListener(xtermHost, 'paste', (e: ClipboardEvent) => {
+			const clipboard = e.clipboardData;
+			if (!clipboard || clipboard.getData('text/plain')) {
+				return;
+			}
+			const item = Array.from(clipboard.items).find(it => it.kind === 'file' && it.type.startsWith('image/'));
+			const file = item?.getAsFile();
+			if (!file) {
+				return;
+			}
+			e.preventDefault();
+			e.stopImmediatePropagation();
+
+			const reader = new FileReader();
+			reader.onload = async () => {
+				const dataUrl = reader.result as string;
+				const base64 = dataUrl.split(',')[1];
+				try {
+					await this._commandService.executeCommand('oyren.terminal.pasteImage', {
+						base64,
+						mime: file.type
+					});
+				} catch (err) {
+					this._logService.error('Oyren paste image failed', err);
+				}
+			};
+			reader.readAsDataURL(file);
+		}, true));
+
 		this._setAriaLabel(xterm.raw, this._instanceId, this._title);
 
 		xterm.raw.attachCustomKeyEventHandler((event: KeyboardEvent): boolean => {

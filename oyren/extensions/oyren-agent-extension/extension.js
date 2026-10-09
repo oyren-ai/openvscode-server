@@ -40,6 +40,41 @@ function activate(context) {
     }
   }
 
+  // Image paste for the terminal
+  try {
+    context.subscriptions.push(vscode.commands.registerCommand('oyren.terminal.pasteImage', async (args) => {
+      if (!args || !args.base64 || !args.mime) return
+      
+      // We are in the Extension Host, running Node.js in the sandbox container.
+      const fs = require('fs')
+      const path = require('path')
+      const os = require('os')
+      const dir = process.env.OYREN_TERMINAL_PASTE_DIR || path.join(os.tmpdir(), "oyren-terminal-pastes")
+      
+      const MAX_BYTES = 10 * 1024 * 1024
+      const buf = Buffer.from(args.base64, 'base64')
+      if (buf.length > MAX_BYTES) return
+      
+      const EXT_BY_MIME = {
+        "image/png": "png", "image/jpeg": "jpg", "image/jpg": "jpg",
+        "image/gif": "gif", "image/webp": "webp", "image/bmp": "bmp", "image/svg+xml": "svg"
+      }
+      const ext = EXT_BY_MIME[String(args.mime).toLowerCase()] || "png"
+      const name = `paste-${Date.now()}-${Math.floor(Math.random() * 1e6)}.${ext}`
+      const dest = path.join(dir, name)
+      
+      fs.mkdirSync(dir, { recursive: true })
+      fs.writeFileSync(dest, buf)
+      
+      const term = vscode.window.activeTerminal
+      if (term) {
+        term.sendText(dest + " ", false)
+      }
+    }))
+  } catch (err) {
+    console.error(`oyren-agent: pasteImage registration failed: ${err && err.message}`)
+  }
+
   // The agent-type dropdown: one chat session per CLI agent, on our patched build.
   registerSessionProviders(context)
 }
