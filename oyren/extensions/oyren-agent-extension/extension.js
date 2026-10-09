@@ -49,7 +49,8 @@ function activate(context) {
       const fs = require('fs')
       const path = require('path')
       const os = require('os')
-      const dir = process.env.OYREN_TERMINAL_PASTE_DIR || path.join(os.tmpdir(), "oyren-terminal-pastes")
+      const userInfo = os.userInfo()
+      const dir = process.env.OYREN_TERMINAL_PASTE_DIR || path.join(os.tmpdir(), "oyren-terminal-pastes-" + userInfo.username)
       
       const MAX_BYTES = 10 * 1024 * 1024
       const buf = Buffer.from(args.base64, 'base64')
@@ -63,8 +64,8 @@ function activate(context) {
       const name = `paste-${Date.now()}-${Math.floor(Math.random() * 1e6)}.${ext}`
       const dest = path.join(dir, name)
       
-      fs.mkdirSync(dir, { recursive: true })
-      fs.writeFileSync(dest, buf)
+      fs.mkdirSync(dir, { recursive: true, mode: 0o700 })
+      fs.writeFileSync(dest, buf, { mode: 0o600 })
       
       const term = vscode.window.activeTerminal
       if (term) {
