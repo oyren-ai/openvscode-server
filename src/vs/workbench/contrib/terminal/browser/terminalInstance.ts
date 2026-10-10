@@ -2470,11 +2470,18 @@ export class TerminalInstance extends Disposable implements ITerminalInstance {
 		if (!file) {
 			return;
 		}
+
+		if (file.size > 10 * 1024 * 1024) {
+			logService.error('Oyren paste image failed: file size exceeds 10MB limit');
+			return;
+		}
+
 		e.preventDefault();
 		e.stopImmediatePropagation();
 
-		if (file.size > 10 * 1024 * 1024) return;
 		const reader = new FileReader();
+		reader.onerror = (err) => logService.error('Oyren paste image failed to read file', err);
+		reader.onabort = () => logService.error('Oyren paste image file read aborted');
 		reader.onload = async () => {
 			const dataUrl = reader.result as string;
 			const base64 = dataUrl.split(',')[1];
