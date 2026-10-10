@@ -1103,6 +1103,10 @@ export class TerminalInstance extends Disposable implements ITerminalInstance {
 			throw new Error('xterm elements not set after open');
 		}
 
+		this._register(dom.addDisposableListener(xtermHost, 'paste', (e: ClipboardEvent) => {
+			TerminalInstance.handlePasteEvent(e, this._commandService, this._logService, (text, addNewLine) => this.sendText(text, addNewLine));
+		}, true));
+
 		this._setAriaLabel(xterm.raw, this._instanceId, this._title);
 
 		xterm.raw.attachCustomKeyEventHandler((event: KeyboardEvent): boolean => {
@@ -2454,6 +2458,47 @@ export class TerminalInstance extends Disposable implements ITerminalInstance {
 				return;
 			}
 		}
+	}
+
+	public static handlePasteEvent(e: ClipboardEvent, commandService: ICommandService, logService: ILogService, sendText: (text: string, addNewLine: boolean) => void): void {
+		const clipboard = e.clipboardData;
+		if (!clipboard || clipboard.getData('text/plain')) {
+			return;
+		}
+		const item = Array.from(clipboard.items).find(it => it.kind === 'file' && it.type.startsWith('image/'));
+		const file = item?.getAsFile();
+		if (!file) {
+			return;
+		}
+
+		if (file.size > 10 * 1024 * 1024) {
+			logService.error('Oyren paste image failed: file size exceeds 10MB limit');
+			return;
+		}
+
+		e.preventDefault();
+		e.stopImmediatePropagation();
+
+		const reader = new FileReader();
+		reader.onerror = (err) => logService.error('Oyren paste image failed to read file', err);
+		reader.onabort = () => logService.error('Oyren paste image file read aborted');
+		reader.onload = async () => {
+			const dataUrl = reader.result as string;
+			const base64 = dataUrl.split(',')[1];
+			try {
+				const path = await commandService.executeCommand<string | undefined>('oyren.terminal.pasteImage', {
+					base64,
+					mime: file.type
+				});
+				if (path) {
+					const escapedPath = `'${path.replace(/'/g, "'\\''")}'`;
+					sendText(escapedPath, false);
+				}
+			} catch (err) {
+				logService.error('Oyren paste image failed', err);
+			}
+		};
+		reader.readAsDataURL(file);
 	}
 }
 
