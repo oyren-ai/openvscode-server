@@ -58,6 +58,9 @@ test("oyren.terminal.pasteImage", async (t) => {
   fs.mkdirSync = (dir, options) => {
     mkdirs.push({ dir, options });
   };
+  fs.lstatSync = (dir) => {
+    return { isDirectory: () => true, uid: os.userInfo().uid };
+  };
 
   t.afterEach(() => {
     writtenFiles = [];
@@ -80,7 +83,7 @@ test("oyren.terminal.pasteImage", async (t) => {
   });
 
   await t.test("rejects non-allowlisted MIME (incl svg)", async () => {
-    const buf = Buffer.from('hello', 'utf-8');
+    const buf = Buffer.from('89504e470d0a1a0a', 'hex');
     const base64 = buf.toString('base64');
     
     await handler({ base64, mime: 'image/svg+xml' });
@@ -91,7 +94,7 @@ test("oyren.terminal.pasteImage", async (t) => {
   });
 
   await t.test("ignores any path from the client", async () => {
-    const buf = Buffer.from('hello', 'utf-8');
+    const buf = Buffer.from('89504e470d0a1a0a', 'hex');
     const base64 = buf.toString('base64');
     
     await handler({ base64, mime: 'image/png', path: '/etc/passwd' });
@@ -104,7 +107,7 @@ test("oyren.terminal.pasteImage", async (t) => {
   });
 
   await t.test("writes 0600 inside a 0700 per-user dir", async () => {
-    const buf = Buffer.from('hello', 'utf-8');
+    const buf = Buffer.from('89504e470d0a1a0a', 'hex');
     const base64 = buf.toString('base64');
     await handler({ base64, mime: 'image/png' });
     
@@ -117,7 +120,7 @@ test("oyren.terminal.pasteImage", async (t) => {
   });
 
   await t.test("returns a shell-quoted path", async () => {
-    const buf = Buffer.from('hello', 'utf-8');
+    const buf = Buffer.from('89504e470d0a1a0a', 'hex');
     const base64 = buf.toString('base64');
     const resultPath = await handler({ base64, mime: 'image/png' });
     

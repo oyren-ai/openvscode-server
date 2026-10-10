@@ -46,32 +46,77 @@ function activate(context) {
       if (!args || !args.base64 || !args.mime) return
       
       // We are in the Extension Host, running Node.js in the sandbox container.
-      const fs = require('fs')
-      const path = require('path')
-      const os = require('os')
-      const userInfo = os.userInfo()
-      const dir = process.env.OYREN_TERMINAL_PASTE_DIR || path.join(os.tmpdir(), "oyren-terminal-pastes-" + userInfo.username)
+      const fs = require('fs');
+      const path = require('path');
+      const os = require('os');
+      const crypto = require('crypto');
+      const userInfo = os.userInfo();
+      const dir = process.env.OYREN_TERMINAL_PASTE_DIR || path.join(os.tmpdir(), "oyren-terminal-pastes-" + userInfo.username);
       
       const MAX_BYTES = 10 * 1024 * 1024;
-      // Rough base64 length check (4 chars = 3 bytes)
       if (args.base64.length > (MAX_BYTES * 4 / 3) + 1000) return;
       const buf = Buffer.from(args.base64, 'base64');
       if (buf.length > MAX_BYTES) return;
-      
+
       const EXT_BY_MIME = {
         "image/png": "png", "image/jpeg": "jpg", "image/jpg": "jpg",
         "image/gif": "gif", "image/webp": "webp", "image/bmp": "bmp"
       }
-      // Exclude svg
-      const ext = EXT_BY_MIME[String(args.mime).toLowerCase()];
-      if (!ext) return;
-      
-      const name = `paste-${Date.now()}-${Math.floor(Math.random() * 1e6)}.${ext}`;
+      const requestedExt = EXT_BY_MIME[String(args.mime).toLowerCase()];
+      if (!requestedExt) return;
+
+      // Verify Magic Bytes
+      let magicMatch = false;
+      let ext = "";
+      if (buf.length >= 4) {
+          const hex = buf.toString('hex', 0, 4).toUpperCase();
+          const hex12 = buf.length >= 12 ? buf.toString('hex', 0, 12).toUpperCase() : '';
+          
+          if (hex.startsWith('89504E47')) {
+              magicMatch = true; ext = "png";
+          } else if (hex.startsWith('FFD8FF')) {
+              magicMatch = true; ext = "jpg";
+          } else if (hex.startsWith('47494638')) { // GIF8
+              magicMatch = true; ext = "gif";
+          } else if (hex.startsWith('424D')) { // BM
+              magicMatch = true; ext = "bmp";
+          } else if (hex.startsWith('52494646') && hex12.endsWith('57454250')) { // RIFF...WEBP
+              magicMatch = true; ext = "webp";
+          }
+      }
+      if (!magicMatch) {
+          console.error('oyren-agent: pasteImage failed: invalid image magic bytes');
+          return;
+      }
+
+      // Safe directory creation
+      try {
+          fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+      } catch (e) {
+          // ignore
+      }
+      // Ensure dir is a directory owned by user and mode 700
+      try {
+          const stats = fs.lstatSync(dir);
+          if (!stats.isDirectory() || stats.uid !== userInfo.uid) {
+              console.error('oyren-agent: pasteImage failed: invalid paste directory');
+              return;
+          }
+      } catch (e) {
+          return;
+      }
+
+      const randomBytes = crypto.randomBytes(16).toString('hex');
+      const name = `paste-${randomBytes}.${ext}`;
       const dest = path.join(dir, name);
       
-      fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
-      fs.writeFileSync(dest, buf, { mode: 0o600 });
-      return dest;
+      try {
+          fs.writeFileSync(dest, buf, { mode: 0o600, flag: 'wx' });
+          return dest;
+      } catch (err) {
+          console.error(`oyren-agent: pasteImage write failed: ${err.message}`);
+          return;
+      }
     }))
   } catch (err) {
     console.error(`oyren-agent: pasteImage registration failed: ${err && err.message}`)
