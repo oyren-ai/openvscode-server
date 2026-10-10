@@ -548,4 +548,101 @@ suite('Workbench - TerminalInstance', () => {
 			strictEqual(result, undefined);
 		});
 	});
+
+
+	suite('Paste Listener', () => {
+		let commandService: any;
+		let logService: any;
+		let sendTextArgs: { text: string; addNewLine: boolean }[] = [];
+		let commandArgs: any[] = [];
+
+		setup(() => {
+			sendTextArgs = [];
+			commandArgs = [];
+			commandService = {
+				executeCommand: async (cmd: string, args: any) => {
+					commandArgs.push({ cmd, args });
+					if (cmd === 'oyren.terminal.pasteImage') {
+						return '/tmp/image.png';
+					}
+					return undefined;
+				}
+			};
+			logService = {
+				error: () => {}
+			};
+			
+			// Mock global FileReader for tests
+			(globalThis as any).FileReader = class FileReader {
+				onload: (() => void) | null = null;
+				result: string = '';
+				readAsDataURL(file: any) {
+					this.result = 'data:image/png;base64,mockbase64';
+					if (this.onload) {
+						this.onload();
+					}
+				}
+			};
+		});
+
+		teardown(() => {
+			delete (globalThis as any).FileReader;
+		});
+
+		test('text paste untouched', async () => {
+			let preventDefaultCalled = false;
+			let stopImmediatePropagationCalled = false;
+			const mockEvent: any = {
+				clipboardData: {
+					getData: (type: string) => type === 'text/plain' ? 'some text' : null,
+					items: []
+				},
+				preventDefault: () => { preventDefaultCalled = true; },
+				stopImmediatePropagation: () => { stopImmediatePropagationCalled = true; }
+			};
+
+			TerminalInstance.handlePasteEvent(mockEvent, commandService, logService, (text, addNewLine) => {
+				sendTextArgs.push({ text, addNewLine });
+			});
+
+			strictEqual(preventDefaultCalled, false);
+			strictEqual(stopImmediatePropagationCalled, false);
+			strictEqual(commandArgs.length, 0);
+			strictEqual(sendTextArgs.length, 0);
+		});
+
+		test('image paste dispatches once', async () => {
+			let preventDefaultCalled = false;
+			let stopImmediatePropagationCalled = false;
+			const mockFile = { size: 1024, type: 'image/png' };
+			const mockEvent: any = {
+				clipboardData: {
+					getData: () => null,
+					items: [{
+						kind: 'file',
+						type: 'image/png',
+						getAsFile: () => mockFile
+					}]
+				},
+				preventDefault: () => { preventDefaultCalled = true; },
+				stopImmediatePropagation: () => { stopImmediatePropagationCalled = true; }
+			};
+
+			TerminalInstance.handlePasteEvent(mockEvent, commandService, logService, (text, addNewLine) => {
+				sendTextArgs.push({ text, addNewLine });
+			});
+
+			// We need to wait for microtasks since reader.onload is async
+			await new Promise(resolve => setTimeout(resolve, 10));
+
+			strictEqual(preventDefaultCalled, true);
+			strictEqual(stopImmediatePropagationCalled, true);
+			strictEqual(commandArgs.length, 1);
+			strictEqual(commandArgs[0].cmd, 'oyren.terminal.pasteImage');
+			strictEqual(commandArgs[0].args.base64, 'mockbase64');
+			strictEqual(sendTextArgs.length, 1);
+			strictEqual(sendTextArgs[0].text, "'/tmp/image.png'");
+			strictEqual(sendTextArgs[0].addNewLine, false);
+		});
+	});
 });

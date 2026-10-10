@@ -1104,37 +1104,7 @@ export class TerminalInstance extends Disposable implements ITerminalInstance {
 		}
 
 		this._register(dom.addDisposableListener(xtermHost, 'paste', (e: ClipboardEvent) => {
-			const clipboard = e.clipboardData;
-			if (!clipboard || clipboard.getData('text/plain')) {
-				return;
-			}
-			const item = Array.from(clipboard.items).find(it => it.kind === 'file' && it.type.startsWith('image/'));
-			const file = item?.getAsFile();
-			if (!file) {
-				return;
-			}
-			e.preventDefault();
-			e.stopImmediatePropagation();
-
-			if (file.size > 10 * 1024 * 1024) return;
-			const reader = new FileReader();
-			reader.onload = async () => {
-				const dataUrl = reader.result as string;
-				const base64 = dataUrl.split(',')[1];
-				try {
-					const path = await this._commandService.executeCommand<string | undefined>('oyren.terminal.pasteImage', {
-						base64,
-						mime: file.type
-					});
-					if (path) {
-						const escapedPath = `'${path.replace(/'/g, "'\\''")}'`;
-						this.sendText(escapedPath, false);
-					}
-				} catch (err) {
-					this._logService.error('Oyren paste image failed', err);
-				}
-			};
-			reader.readAsDataURL(file);
+			TerminalInstance.handlePasteEvent(e, this._commandService, this._logService, (text, addNewLine) => this.sendText(text, addNewLine));
 		}, true));
 
 		this._setAriaLabel(xterm.raw, this._instanceId, this._title);
@@ -2488,6 +2458,40 @@ export class TerminalInstance extends Disposable implements ITerminalInstance {
 				return;
 			}
 		}
+	}
+
+	public static handlePasteEvent(e: ClipboardEvent, commandService: ICommandService, logService: ILogService, sendText: (text: string, addNewLine: boolean) => void): void {
+		const clipboard = e.clipboardData;
+		if (!clipboard || clipboard.getData('text/plain')) {
+			return;
+		}
+		const item = Array.from(clipboard.items).find(it => it.kind === 'file' && it.type.startsWith('image/'));
+		const file = item?.getAsFile();
+		if (!file) {
+			return;
+		}
+		e.preventDefault();
+		e.stopImmediatePropagation();
+
+		if (file.size > 10 * 1024 * 1024) return;
+		const reader = new FileReader();
+		reader.onload = async () => {
+			const dataUrl = reader.result as string;
+			const base64 = dataUrl.split(',')[1];
+			try {
+				const path = await commandService.executeCommand<string | undefined>('oyren.terminal.pasteImage', {
+					base64,
+					mime: file.type
+				});
+				if (path) {
+					const escapedPath = `'${path.replace(/'/g, "'\\''")}'`;
+					sendText(escapedPath, false);
+				}
+			} catch (err) {
+				logService.error('Oyren paste image failed', err);
+			}
+		};
+		reader.readAsDataURL(file);
 	}
 }
 
