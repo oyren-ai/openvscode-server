@@ -1,130 +1,158 @@
-const test = require("node:test");
-const assert = require("node:assert");
-const fs = require("fs");
-const path = require("path");
-const os = require("os");
+// Terminal image paste: the extension-host half. The workbench reads an image off the browser
+// clipboard and hands it here as base64; this side writes it into a private per-user directory in
+// the sandbox and returns the absolute path, which the workbench types into the terminal (so a CLI
+// agent like Claude Code can attach it). Tests run against a real temp directory, no fs fakes.
+const test = require("node:test")
+const assert = require("node:assert")
+const fs = require("fs")
+const os = require("os")
+const path = require("path")
 
-// Mock vscode
-const commands = {};
-const mockTerminal = {
-  texts: [],
-  sendText(text, addNewLine) {
-    this.texts.push({ text, addNewLine });
+const { saveTerminalPaste, registerTerminalPaste, sniffImageType, MAX_PASTE_BYTES, PASTE_IMAGE_COMMAND } = require("./terminalPaste")
+
+const PNG = Buffer.concat([Buffer.from("89504e470d0a1a0a0000000d49484452", "hex"), Buffer.alloc(32, 1)])
+const JPEG = Buffer.concat([Buffer.from("ffd8ffe000104a464946", "hex"), Buffer.alloc(32, 2)])
+const GIF = Buffer.concat([Buffer.from("GIF89a"), Buffer.alloc(32, 3)])
+const WEBP = Buffer.concat([Buffer.from("RIFF"), Buffer.from([0x10, 0, 0, 0]), Buffer.from("WEBPVP8 "), Buffer.alloc(32, 4)])
+const BMP = Buffer.concat([Buffer.from("BM"), Buffer.alloc(32, 5)])
+const SVG = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>')
+
+function tmpRoot(t) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "oyren-paste-test-"))
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }))
+  return root
+}
+const mode = (p) => fs.statSync(p).mode & 0o777
+
+test("sniffImageType recognises the allowlisted formats by their magic bytes only", () => {
+  assert.strictEqual(sniffImageType(PNG), "png")
+  assert.strictEqual(sniffImageType(JPEG), "jpg")
+  assert.strictEqual(sniffImageType(GIF), "gif")
+  assert.strictEqual(sniffImageType(WEBP), "webp")
+  assert.strictEqual(sniffImageType(BMP), "bmp")
+  assert.strictEqual(sniffImageType(SVG), undefined)
+  assert.strictEqual(sniffImageType(Buffer.from("RIFF\0\0\0\0WAVEfmt ")), undefined)
+  assert.strictEqual(sniffImageType(Buffer.alloc(0)), undefined)
+})
+
+test("writes the image 0600 into a fresh 0700 directory and returns its absolute path", (t) => {
+  const dir = path.join(tmpRoot(t), "pastes")
+  const res = saveTerminalPaste({ base64: PNG.toString("base64"), mime: "image/png" }, { dir })
+  assert.ok(res.path, `expected a path, got ${JSON.stringify(res)}`)
+  assert.ok(path.isAbsolute(res.path))
+  assert.strictEqual(path.dirname(res.path), dir)
+  assert.match(path.basename(res.path), /^paste-[0-9a-f]{32}\.png$/)
+  assert.deepStrictEqual(fs.readFileSync(res.path), PNG)
+  assert.strictEqual(mode(res.path), 0o600)
+  assert.strictEqual(mode(dir), 0o700)
+})
+
+test("the extension comes from the bytes, not from the client's mime", (t) => {
+  const dir = path.join(tmpRoot(t), "pastes")
+  const res = saveTerminalPaste({ base64: JPEG.toString("base64"), mime: "image/png" }, { dir })
+  assert.match(res.path, /\.jpg$/)
+  // mime is optional: Chrome's async clipboard always reports image/png, the bytes decide.
+  assert.match(saveTerminalPaste({ base64: GIF.toString("base64") }, { dir }).path, /\.gif$/)
+})
+
+test("each paste gets its own file", (t) => {
+  const dir = path.join(tmpRoot(t), "pastes")
+  const a = saveTerminalPaste({ base64: PNG.toString("base64") }, { dir }).path
+  const b = saveTerminalPaste({ base64: PNG.toString("base64") }, { dir }).path
+  assert.notStrictEqual(a, b)
+  assert.strictEqual(fs.readdirSync(dir).length, 2)
+})
+
+test("rejects SVG and other non-image payloads, whatever mime the client claims", (t) => {
+  const dir = path.join(tmpRoot(t), "pastes")
+  assert.ok(saveTerminalPaste({ base64: SVG.toString("base64"), mime: "image/svg+xml" }, { dir }).error)
+  assert.ok(saveTerminalPaste({ base64: SVG.toString("base64"), mime: "image/png" }, { dir }).error)
+  assert.ok(saveTerminalPaste({ base64: PNG.toString("base64"), mime: "image/svg+xml" }, { dir }).error)
+  assert.ok(saveTerminalPaste({ base64: PNG.toString("base64"), mime: "text/html" }, { dir }).error)
+  assert.ok(!fs.existsSync(dir) || fs.readdirSync(dir).length === 0)
+})
+
+test("rejects missing or malformed arguments without throwing", (t) => {
+  const dir = path.join(tmpRoot(t), "pastes")
+  for (const bad of [undefined, null, {}, { base64: "" }, { base64: 42 }, "iVBORw0KGgo="]) {
+    const res = saveTerminalPaste(bad, { dir })
+    assert.ok(res.error, `expected an error for ${JSON.stringify(bad)}`)
   }
-};
-const vscode = {
-  commands: {
-    registerCommand(name, fn) {
-      commands[name] = fn;
-      return { dispose: () => {} };
-    }
-  },
-  window: {
-    get activeTerminal() { return mockTerminal; }
-  },
-  chat: { createChatParticipant: () => ({ dispose: () => {} }) },
-  lm: { registerLanguageModelChatProvider: () => ({ dispose: () => {} }), selectChatModels: async () => [] }
-};
+})
 
-const Module = require('module');
-const originalRequire = Module.prototype.require;
-Module.prototype.require = function(req) {
-  if (req === 'vscode') return vscode;
-  if (req.includes('./agentClient')) return { createClient: () => ({}) };
-  if (req.includes('./turnHandler')) return { makeHandler: () => ({}) };
-  if (req.includes('./modelProvider')) return { createModelProvider: () => ({}) };
-  if (req.includes('./sessionProviders')) return { registerSessionProviders: () => {} };
-  return originalRequire.apply(this, arguments);
-};
+test("rejects images over 10 MiB before decoding them", (t) => {
+  const dir = path.join(tmpRoot(t), "pastes")
+  const big = Buffer.concat([PNG, Buffer.alloc(MAX_PASTE_BYTES)])
+  const res = saveTerminalPaste({ base64: big.toString("base64"), mime: "image/png" }, { dir })
+  assert.match(res.error, /10 MB/)
+  assert.ok(!fs.existsSync(dir) || fs.readdirSync(dir).length === 0)
+  // exactly at the limit is fine
+  const atLimit = Buffer.concat([PNG, Buffer.alloc(MAX_PASTE_BYTES - PNG.length)])
+  assert.ok(saveTerminalPaste({ base64: atLimit.toString("base64") }, { dir }).path)
+})
 
-const { activate } = require("./extension.js");
+test("ignores any path or name the client sends", (t) => {
+  const root = tmpRoot(t)
+  const dir = path.join(root, "pastes")
+  const res = saveTerminalPaste({ base64: PNG.toString("base64"), path: path.join(root, "evil.png"), name: "../../evil.png", dir: root }, { dir })
+  assert.strictEqual(path.dirname(res.path), dir)
+  assert.ok(!fs.existsSync(path.join(root, "evil.png")))
+})
 
-test("oyren.terminal.pasteImage", async (t) => {
-  const context = { subscriptions: [] };
-  activate(context);
-  const handler = commands['oyren.terminal.pasteImage'];
-  assert.ok(handler);
+test("tightens an existing group/world-readable directory to 0700", (t) => {
+  const dir = path.join(tmpRoot(t), "pastes")
+  fs.mkdirSync(dir, { mode: 0o755 })
+  fs.chmodSync(dir, 0o755)
+  assert.ok(saveTerminalPaste({ base64: PNG.toString("base64") }, { dir }).path)
+  assert.strictEqual(mode(dir), 0o700)
+})
 
-  // We need to mock fs to avoid writing real files
-  const originalWriteFile = fs.writeFileSync;
-  const originalMkdir = fs.mkdirSync;
-  
-  let writtenFiles = [];
-  let mkdirs = [];
-  
-  fs.writeFileSync = (dest, buf, options) => {
-    writtenFiles.push({ dest, buf, options });
-  };
-  fs.mkdirSync = (dir, options) => {
-    mkdirs.push({ dir, options });
-  };
-  fs.lstatSync = (dir) => {
-    return { isDirectory: () => true, uid: os.userInfo().uid };
-  };
+test("refuses a paste directory that is a symlink", (t) => {
+  const root = tmpRoot(t)
+  const target = path.join(root, "elsewhere")
+  fs.mkdirSync(target, { mode: 0o700 })
+  const dir = path.join(root, "pastes")
+  fs.symlinkSync(target, dir)
+  const res = saveTerminalPaste({ base64: PNG.toString("base64") }, { dir })
+  assert.ok(res.error)
+  assert.strictEqual(fs.readdirSync(target).length, 0)
+})
 
-  t.afterEach(() => {
-    writtenFiles = [];
-    mkdirs = [];
-    mockTerminal.texts = [];
-  });
+test("refuses a paste directory owned by someone else", (t) => {
+  const dir = path.join(tmpRoot(t), "pastes")
+  fs.mkdirSync(dir, { mode: 0o700 })
+  const res = saveTerminalPaste({ base64: PNG.toString("base64") }, { dir, uid: os.userInfo().uid + 1 })
+  assert.ok(res.error)
+  assert.strictEqual(fs.readdirSync(dir).length, 0)
+})
 
-  t.after(() => {
-    fs.writeFileSync = originalWriteFile;
-    fs.mkdirSync = originalMkdir;
-  });
+test("the default directory is per-user under the OS temp dir", (t) => {
+  const prev = process.env.OYREN_TERMINAL_PASTE_DIR
+  delete process.env.OYREN_TERMINAL_PASTE_DIR
+  t.after(() => { if (prev === undefined) delete process.env.OYREN_TERMINAL_PASTE_DIR; else process.env.OYREN_TERMINAL_PASTE_DIR = prev })
+  const { defaultPasteDir } = require("./terminalPaste")
+  assert.strictEqual(defaultPasteDir(), path.join(os.tmpdir(), `oyren-terminal-pastes-${os.userInfo().username}`))
+  process.env.OYREN_TERMINAL_PASTE_DIR = "/somewhere/else"
+  assert.strictEqual(defaultPasteDir(), "/somewhere/else")
+})
 
-  await t.test("rejects >10 MB", async () => {
-    // 11 MB of data
-    const buf = Buffer.alloc(11 * 1024 * 1024);
-    const base64 = buf.toString('base64');
-    const result = await handler({ base64, mime: 'image/png' });
-    assert.strictEqual(result, undefined);
-    assert.strictEqual(writtenFiles.length, 0);
-  });
+test("registerTerminalPaste wires the command the workbench calls", async (t) => {
+  const dir = path.join(tmpRoot(t), "pastes")
+  const registered = {}
+  const fakeVscode = { commands: { registerCommand: (id, fn) => { registered[id] = fn; return { dispose() {} } } } }
+  const context = { subscriptions: [] }
+  registerTerminalPaste(context, fakeVscode, { dir })
+  assert.strictEqual(PASTE_IMAGE_COMMAND, "oyren.terminal.pasteImage")
+  assert.strictEqual(typeof registered[PASTE_IMAGE_COMMAND], "function")
+  assert.strictEqual(context.subscriptions.length, 1)
+  const res = await registered[PASTE_IMAGE_COMMAND]({ base64: PNG.toString("base64"), mime: "image/png" })
+  assert.strictEqual(path.dirname(res.path), dir)
+})
 
-  await t.test("rejects non-allowlisted MIME (incl svg)", async () => {
-    const buf = Buffer.from('89504e470d0a1a0a', 'hex');
-    const base64 = buf.toString('base64');
-    
-    await handler({ base64, mime: 'image/svg+xml' });
-    assert.strictEqual(writtenFiles.length, 0);
-
-    await handler({ base64, mime: 'text/plain' });
-    assert.strictEqual(writtenFiles.length, 0);
-  });
-
-  await t.test("ignores any path from the client", async () => {
-    const buf = Buffer.from('89504e470d0a1a0a', 'hex');
-    const base64 = buf.toString('base64');
-    
-    await handler({ base64, mime: 'image/png', path: '/etc/passwd' });
-    assert.strictEqual(writtenFiles.length, 1);
-    
-    const userInfo = os.userInfo();
-    const expectedDir = process.env.OYREN_TERMINAL_PASTE_DIR || path.join(os.tmpdir(), "oyren-terminal-pastes-" + userInfo.username);
-    assert.ok(writtenFiles[0].dest.startsWith(expectedDir));
-    assert.ok(!writtenFiles[0].dest.includes('/etc/passwd'));
-  });
-
-  await t.test("writes 0600 inside a 0700 per-user dir", async () => {
-    const buf = Buffer.from('89504e470d0a1a0a', 'hex');
-    const base64 = buf.toString('base64');
-    await handler({ base64, mime: 'image/png' });
-    
-    assert.strictEqual(mkdirs.length, 1);
-    assert.strictEqual(mkdirs[0].options.mode, 0o700);
-    assert.strictEqual(mkdirs[0].options.recursive, true);
-
-    assert.strictEqual(writtenFiles.length, 1);
-    assert.strictEqual(writtenFiles[0].options.mode, 0o600);
-  });
-
-  await t.test("returns a shell-quoted path", async () => {
-    const buf = Buffer.from('89504e470d0a1a0a', 'hex');
-    const base64 = buf.toString('base64');
-    const resultPath = await handler({ base64, mime: 'image/png' });
-    
-    assert.strictEqual(typeof resultPath, 'string');
-    assert.ok(resultPath.endsWith('.png'));
-  });
-});
+test("extension.js registers the paste command on activation", () => {
+  // activate() pulls in the whole chat stack; checking the wiring statically keeps this test
+  // free of a fake for every chat/lm API.
+  const src = fs.readFileSync(path.join(__dirname, "extension.js"), "utf8")
+  assert.match(src, /require\("\.\/terminalPaste"\)/)
+  assert.match(src, /registerTerminalPaste\(context, vscode\)/)
+})
