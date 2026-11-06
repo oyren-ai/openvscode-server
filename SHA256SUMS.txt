@@ -1,0 +1,4 @@
+3df3900e2e4cfa6fd264e2c6215d24c161e65439c53918377e283203a2fda8f9  1-terminal-paste-command.png
+3e91d7a4b143068b1bbf6f0f5ec468f67f858845cccc2ef135fce085931f7927  2-terminal-paste-verified.png
+6af8f28846923730413139dbf424cd0b3a3001bd8b3083bc24b0a453062e2ed7  3-claude-code-image-pasted.png
+b9eb66050c5038a4b38e62f85be0ff4b3178b93b32a68cc520a4ec3c15b94da8  terminal-image-paste-proof.mp4
