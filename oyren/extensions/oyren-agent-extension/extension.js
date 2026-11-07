@@ -3,6 +3,7 @@ const { createClient } = require("./agentClient")
 const { makeHandler } = require("./turnHandler")
 const { createModelProvider } = require("./modelProvider")
 const { registerSessionProviders } = require("./sessionProviders")
+const { registerTerminalPaste } = require("./terminalPaste")
 
 /**
  * The production successor to oyren-chat-probe: VS Code's built-in Chat view, backed by the sandbox
@@ -38,6 +39,14 @@ function activate(context) {
     } catch (err) {
       console.error(`oyren-agent: model provider registration failed: ${err && err.message}`)
     }
+  }
+
+  // Terminal image paste: the patched workbench hands us a pasted screenshot, we save it in the
+  // sandbox and return its path for the terminal (terminalPaste.js).
+  try {
+    registerTerminalPaste(context, vscode)
+  } catch (err) {
+    console.error(`oyren-agent: pasteImage registration failed: ${err && err.message}`)
   }
 
   // The agent-type dropdown: one chat session per CLI agent, on our patched build.
