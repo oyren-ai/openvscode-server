@@ -19,16 +19,18 @@ import { isLinux, isMacintosh } from '../../../../../base/common/platform.js';
 import { INotificationService } from '../../../../../platform/notification/common/notification.js';
 import { registerActiveInstanceAction, registerActiveXtermAction } from '../../../terminal/browser/terminalActions.js';
 import { TerminalCommandId } from '../../../terminal/common/terminal.js';
-import { localize, localize2 } from '../../../../../nls.js';
+import { localize2 } from '../../../../../nls.js';
 import { ContextKeyExpr } from '../../../../../platform/contextkey/common/contextkey.js';
 import { TerminalContextKeys } from '../../../terminal/common/terminalContextKey.js';
 import { KeyCode, KeyMod } from '../../../../../base/common/keyCodes.js';
 import { KeybindingWeight } from '../../../../../platform/keybinding/common/keybindingsRegistry.js';
 import { terminalStrings } from '../../../terminal/common/terminalStrings.js';
 import { isString } from '../../../../../base/common/types.js';
+import { generateUuid } from '../../../../../base/common/uuid.js';
 import * as dom from '../../../../../base/browser/dom.js';
+import { mainWindow } from '../../../../../base/browser/window.js';
 import { ICommandService } from '../../../../../platform/commands/common/commands.js';
-import { getPastedImageFile, pasteImageIntoTerminal, TerminalImagePasteResult } from '../common/terminalImagePaste.js';
+import { getPastedImageFile, IPastedImageFile, ITerminalImagePasteHost, pasteImageFileIntoTerminal, pasteImageIntoTerminal, TERMINAL_CLEANUP_PASTE_SESSION_COMMAND, TerminalImagePasteResult } from '../common/terminalImagePaste.js';
 
 // #region Terminal Contributions
 
@@ -42,6 +44,8 @@ export class TerminalClipboardContribution extends Disposable implements ITermin
 	private _xterm: IXtermTerminal & { raw: RawXtermTerminal } | undefined;
 
 	private _overrideCopySelection: boolean | undefined = undefined;
+	private readonly _pasteSessionId = generateUuid().replace(/-/g, '');
+	private _hasPastedImage = false;
 
 	private readonly _onWillPaste = this._register(new Emitter<string>());
 	readonly onWillPaste = this._onWillPaste.event;
@@ -58,6 +62,11 @@ export class TerminalClipboardContribution extends Disposable implements ITermin
 		@ICommandService private readonly _commandService: ICommandService,
 	) {
 		super();
+		this._register(toDisposable(() => {
+			if (this._hasPastedImage) {
+				this._commandService.executeCommand(TERMINAL_CLEANUP_PASTE_SESSION_COMMAND, { sessionId: this._pasteSessionId }).then(undefined, () => { });
+			}
+		}));
 	}
 
 	xtermOpen(xterm: IXtermTerminal & { raw: RawXtermTerminal }): void {
@@ -75,7 +84,7 @@ export class TerminalClipboardContribution extends Disposable implements ITermin
 			}
 			e.preventDefault();
 			e.stopImmediatePropagation();
-			file.arrayBuffer().then(buffer => this._pasteImage(new Uint8Array(buffer)), () => this._notificationService.warn(localize('terminal.imagePaste.readFailed', "Could not read the pasted image.")));
+			void this._pasteImageFile(file);
 		}, true));
 	}
 
@@ -109,7 +118,7 @@ export class TerminalClipboardContribution extends Disposable implements ITermin
 	 */
 	async paste(): Promise<void> {
 		const text = await this._clipboardService.readText();
-		if (!text && this._canPasteImage() && await this._pasteImage(await this._clipboardService.readImage()) !== TerminalImagePasteResult.NoImage) {
+		if (!text && this._canPasteImage() && await this._pasteClipboardImage() !== TerminalImagePasteResult.NoImage) {
 			return;
 		}
 		await this._paste(text);
@@ -127,19 +136,62 @@ export class TerminalClipboardContribution extends Disposable implements ITermin
 		return !isDetachedTerminalInstance(this._ctx.instance);
 	}
 
-	private async _pasteImage(bytes: Uint8Array | undefined): Promise<TerminalImagePasteResult> {
-		const instance = this._ctx.instance;
-		if (isDetachedTerminalInstance(instance)) {
-			return TerminalImagePasteResult.NoImage;
-		}
-		return pasteImageIntoTerminal(bytes, {
-			executeCommand: (id, arg) => this._commandService.executeCommand(id, arg),
+	private _createImagePasteHost(instance: ITerminalInstance): ITerminalImagePasteHost {
+		return {
+			sessionId: this._pasteSessionId,
+			executeCommand: (id, arg) => {
+				this._hasPastedImage = true;
+				return this._commandService.executeCommand(id, arg);
+			},
 			sendPath: async path => {
 				instance.focus();
 				await instance.sendText(await instance.preparePathForShell(path), false, true);
 			},
 			warn: message => this._notificationService.warn(message),
-		});
+		};
+	}
+
+	private async _pasteImageFile(file: IPastedImageFile): Promise<TerminalImagePasteResult> {
+		const instance = this._ctx.instance;
+		if (isDetachedTerminalInstance(instance)) {
+			return TerminalImagePasteResult.NoImage;
+		}
+		return pasteImageFileIntoTerminal(file, this._createImagePasteHost(instance));
+	}
+
+	private async _readBrowserClipboardImageBlob(): Promise<IPastedImageFile | undefined> {
+		try {
+			const clipboard = mainWindow.navigator?.clipboard;
+			if (!clipboard || typeof clipboard.read !== 'function') {
+				return undefined;
+			}
+			const items = await clipboard.read();
+			const item = items[0];
+			if (!item) {
+				return undefined;
+			}
+			const supportedTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/bmp'];
+			const mime = supportedTypes.find(type => item.types.includes(type));
+			if (!mime) {
+				return undefined;
+			}
+			return await item.getType(mime);
+		} catch {
+			return undefined;
+		}
+	}
+
+	private async _pasteClipboardImage(): Promise<TerminalImagePasteResult> {
+		const instance = this._ctx.instance;
+		if (isDetachedTerminalInstance(instance)) {
+			return TerminalImagePasteResult.NoImage;
+		}
+		const host = this._createImagePasteHost(instance);
+		const blob = await this._readBrowserClipboardImageBlob();
+		if (blob) {
+			return pasteImageFileIntoTerminal(blob, host);
+		}
+		return pasteImageIntoTerminal(await this._clipboardService.readImage(), host);
 	}
 
 	private async _paste(value: string): Promise<void> {

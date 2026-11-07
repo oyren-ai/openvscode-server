@@ -6,22 +6,28 @@
 import { deepStrictEqual, strictEqual } from 'assert';
 import { decodeBase64 } from '../../../../../../base/common/buffer.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
-import { getPastedImageFile, ITerminalImagePasteHost, pasteImageIntoTerminal, sniffImageMime, TERMINAL_PASTE_IMAGE_COMMAND, TERMINAL_PASTE_IMAGE_MAX_BYTES, TerminalImagePasteResult } from '../../common/terminalImagePaste.js';
+import { getPastedImageFile, ITerminalImagePasteHost, pasteImageFileIntoTerminal, pasteImageIntoTerminal, sniffImageMime, TERMINAL_CLEANUP_PASTE_SESSION_COMMAND, TERMINAL_PASTE_IMAGE_COMMAND, TERMINAL_PASTE_IMAGE_MAX_BYTES, TerminalImagePasteResult } from '../../common/terminalImagePaste.js';
 
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0x0d, 0x49, 0x48, 0x44, 0x52]);
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0x10, 0x4a, 0x46, 0x49, 0x46]);
 const TIFF = new Uint8Array([0x49, 0x49, 0x2a, 0x00, 8, 0, 0, 0]);
+const SESSION_ID = 'a1b2c3d4e5f60718293a4b5c6d7e8f90';
 
 class FakeHost implements ITerminalImagePasteHost {
-	readonly calls: { id: string; arg: { base64: string; mime: string } }[] = [];
+	readonly calls: { id: string; arg: { base64: string; mime: string; sessionId?: string } }[] = [];
 	readonly sent: string[] = [];
 	readonly warnings: string[] = [];
+	readonly sessionId = SESSION_ID;
+	sendError: Error | undefined;
 	constructor(private readonly _reply: (id: string) => Promise<unknown>) { }
-	executeCommand(id: string, arg: { base64: string; mime: string }): Promise<unknown> {
+	executeCommand(id: string, arg: { base64: string; mime: string; sessionId?: string }): Promise<unknown> {
 		this.calls.push({ id, arg });
 		return this._reply(id);
 	}
 	async sendPath(path: string): Promise<void> {
+		if (this.sendError) {
+			throw this.sendError;
+		}
 		this.sent.push(path);
 	}
 	warn(message: string): void {
@@ -50,15 +56,17 @@ suite('Terminal image paste', () => {
 		deepStrictEqual([host.calls, host.sent, host.warnings], [[], [], []]);
 	});
 
-	test('an image is uploaded once and the returned sandbox path is typed into the terminal', async () => {
-		const host = new FakeHost(async () => ({ path: '/tmp/oyren-terminal-pastes-u/paste-1.png' }));
+	test('an image is uploaded once with sessionId and the returned sandbox path is typed into the terminal', async () => {
+		const host = new FakeHost(async () => ({ path: `/tmp/oyren-terminal-pastes-u/${SESSION_ID}/paste-1.png` }));
 		strictEqual(await pasteImageIntoTerminal(PNG, host), TerminalImagePasteResult.Pasted);
 		strictEqual(host.calls.length, 1);
 		strictEqual(host.calls[0].id, TERMINAL_PASTE_IMAGE_COMMAND);
 		strictEqual(host.calls[0].id, 'oyren.terminal.pasteImage');
+		strictEqual(TERMINAL_CLEANUP_PASTE_SESSION_COMMAND, 'oyren.terminal.cleanupPasteSession');
 		strictEqual(host.calls[0].arg.mime, 'image/png');
+		strictEqual(host.calls[0].arg.sessionId, SESSION_ID);
 		deepStrictEqual(Array.from(decodeBase64(host.calls[0].arg.base64).buffer), Array.from(PNG));
-		deepStrictEqual(host.sent, ['/tmp/oyren-terminal-pastes-u/paste-1.png']);
+		deepStrictEqual(host.sent, [`/tmp/oyren-terminal-pastes-u/${SESSION_ID}/paste-1.png`]);
 		deepStrictEqual(host.warnings, []);
 	});
 
@@ -79,6 +87,32 @@ suite('Terminal image paste', () => {
 		strictEqual(host.warnings[0].includes('10 MB'), true);
 	});
 
+	test('pasteImageFileIntoTerminal checks File.size before allocating arrayBuffer()', async () => {
+		let allocated = false;
+		const oversizedFile = {
+			size: TERMINAL_PASTE_IMAGE_MAX_BYTES + 1,
+			arrayBuffer: async () => {
+				allocated = true;
+				return new ArrayBuffer(0);
+			}
+		};
+		const host = new FakeHost(async () => ({ path: '/never' }));
+		strictEqual(await pasteImageFileIntoTerminal(oversizedFile, host), TerminalImagePasteResult.Failed);
+		strictEqual(allocated, false);
+		strictEqual(host.calls.length, 0);
+		strictEqual(host.warnings.length, 1);
+		strictEqual(host.warnings[0].includes('10 MB'), true);
+
+		// A rejected arrayBuffer() also turns into a warning rather than an unhandled rejection.
+		const unreadableFile = {
+			size: PNG.byteLength,
+			arrayBuffer: async () => { throw new Error('disk read error'); }
+		};
+		const host2 = new FakeHost(async () => ({ path: '/never' }));
+		strictEqual(await pasteImageFileIntoTerminal(unreadableFile, host2), TerminalImagePasteResult.Failed);
+		strictEqual(host2.warnings.length, 1);
+	});
+
 	test('an unsupported image format is refused with a warning', async () => {
 		const host = new FakeHost(async () => ({ path: '/never' }));
 		strictEqual(await pasteImageIntoTerminal(TIFF, host), TerminalImagePasteResult.Failed);
@@ -91,6 +125,15 @@ suite('Terminal image paste', () => {
 		strictEqual(await pasteImageIntoTerminal(PNG, host), TerminalImagePasteResult.Failed);
 		strictEqual(host.sent.length, 0);
 		strictEqual(host.warnings.length, 1);
+	});
+
+	test('a thrown error in sendPath (e.g. terminal closed mid-upload) becomes a warning, never an unhandled rejection', async () => {
+		const host = new FakeHost(async () => ({ path: '/tmp/p/paste-closed.png' }));
+		host.sendError = new Error('terminal disposed');
+		strictEqual(await pasteImageIntoTerminal(PNG, host), TerminalImagePasteResult.Failed);
+		strictEqual(host.sent.length, 0);
+		strictEqual(host.warnings.length, 1);
+		strictEqual(host.warnings[0].includes('terminal disposed'), true);
 	});
 
 	test('the extension\'s error reason reaches the user', async () => {
@@ -127,3 +170,4 @@ suite('Terminal image paste', () => {
 		}), fakeFile);
 	});
 });
+
