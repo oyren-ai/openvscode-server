@@ -3,17 +3,22 @@ const { createClient } = require("./agentClient")
 const { makeHandler } = require("./turnHandler")
 const { createModelProvider } = require("./modelProvider")
 const { registerSessionProviders } = require("./sessionProviders")
+const { SETTING_SECTION, agentChatEnabled } = require("./agentChatGate")
 
 /**
  * The production successor to oyren-chat-probe: VS Code's built-in Chat view, backed by the sandbox
  * agent for ALL seven providers (docs/oyren-chat-participant.md). The extension host runs inside the
  * droplet, so it dials the runtime directly on 127.0.0.1 — no CORS, no trip through the edge.
  *
+ * Off by default since 2026-11-27 (agentChatGate.js): with oyren.agentChat.enabled unset, activation
+ * registers nothing, matching the manifest's when clauses.
+ *
  * Registration is wrapped, never thrown: a thrown activation is indistinguishable from the Chat view
  * simply being absent, and the two failures have completely different fixes.
  */
 
 function activate(context) {
+  if (!agentChatEnabled(vscode.workspace.getConfiguration(SETTING_SECTION))) return
   const client = createClient()
 
   if (vscode.chat && typeof vscode.chat.createChatParticipant === "function") {
