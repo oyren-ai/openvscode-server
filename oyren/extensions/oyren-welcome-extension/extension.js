@@ -1,24 +1,59 @@
 const vscode = require("vscode")
+const { apiFrom, runStartup, hideBuiltInChat } = require("./startup")
+const { handleMessage } = require("./messages")
+const { pageModel, localResourceRoots } = require("./pageModel")
+const { renderPage } = require("./page")
 
 /**
- * Open the Oyren walkthrough ONCE per machine, on first boot of a session's editor. globalState is
- * the right latch: it lives in the per-session server data dir, so a fresh sandbox shows the
- * walkthrough exactly once and a reload never re-opens it. The core "Setup VS Code Web" walkthrough
- * may still exist under Welcome; ours opens focused on top, which is the surface users actually see.
+ * The Codespace's welcome page (owner, 2026-11-27): this Codespace's facts and every app in it, in
+ * the middle of the editor. It replaces the "Welcome to Oyren" walkthrough, whose steps described the
+ * retired Chat panel. The start sequence (startup.js) also hides the built-in Chat view and opens
+ * Claude Code in the side bar, which is why this activates on "*": the earlier the Chat view is
+ * hidden, the shorter it shows.
+ *
+ * One page at a time: the command reveals the open one, and a page the workbench restores after a
+ * reload is adopted (or dropped, if one is already open).
  */
-const OPENED_KEY = "oyren.welcome.opened"
-const WALKTHROUGH = "oyren.oyren-welcome#oyrenGettingStarted"
+const VIEW_TYPE = "oyren.welcome"
+let panel = null
 
-async function activate(context) {
-  if (context.globalState.get(OPENED_KEY)) return
-  try {
-    // toSide=false: take the main editor area — this IS the onboarding surface, not a sidebar.
-    await vscode.commands.executeCommand("workbench.action.openWalkthrough", WALKTHROUGH, false)
-    await context.globalState.update(OPENED_KEY, true)
-  } catch (err) {
-    // A build without the walkthrough UI just skips onboarding; it must never break activation.
-    console.error(`oyren-welcome: could not open walkthrough: ${err && err.message}`)
-  }
+function activate(context) {
+  const api = apiFrom(vscode, context)
+  const show = () => showPanel(context, api)
+  context.subscriptions.push(
+    vscode.commands.registerCommand("oyren.welcome.open", show),
+    vscode.window.registerWebviewPanelSerializer(VIEW_TYPE, {
+      deserializeWebviewPanel: async (restored) => adopt(context, api, restored),
+    }),
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("oyren.agentChat.enabled")) void hideBuiltInChat(api)
+    }),
+  )
+  runStartup(api, async () => show()).catch((err) => console.error(`oyren-welcome: start failed: ${err && err.message}`))
+}
+
+function options(context) {
+  return { enableScripts: true, enableCommandUris: false, localResourceRoots: localResourceRoots(vscode, context) }
+}
+
+function showPanel(context, api) {
+  if (panel) return panel.reveal(vscode.ViewColumn.One)
+  adopt(context, api, vscode.window.createWebviewPanel(VIEW_TYPE, "Welcome", vscode.ViewColumn.One, options(context)))
+}
+
+function adopt(context, api, created) {
+  if (panel && panel !== created) return created.dispose()
+  panel = created
+  const media = (name) => vscode.Uri.joinPath(context.extensionUri, "media", name)
+  created.iconPath = { light: media("oyren-light.svg"), dark: media("oyren-dark.svg") }
+  created.webview.options = options(context)
+  created.webview.html = renderPage(pageModel({ vscode, context, webview: created.webview, showOnStartup: api.showOnStartup() }))
+  created.webview.onDidReceiveMessage((message) => handleMessage(api, message, saveShowOnStartup), null, context.subscriptions)
+  created.onDidDispose(() => { if (panel === created) panel = null }, null, context.subscriptions)
+}
+
+function saveShowOnStartup(value) {
+  return vscode.workspace.getConfiguration("oyren.welcome").update("showOnStartup", value, vscode.ConfigurationTarget.Global)
 }
 
 function deactivate() {}
