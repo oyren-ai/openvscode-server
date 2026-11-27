@@ -47,12 +47,26 @@ async function defaultSideBar(api) {
   return null
 }
 
-const editorAreaEmpty = (api) => api.tabGroups.all.every((group) => group.tabs.length === 0)
+// The stock Welcome page, or the "Setup VS Code Web" walkthrough it turns into on a fresh browser. The
+// web workbench opens it at first paint, before the remote settings that say startupEditor "none"
+// have arrived (seen on dev, 2026-11-27: open at 4.7 s, before any extension ran). It has no tab input
+// the extension API can name; only English labels are recognised, elsewhere it simply stays open.
+const isStockWelcome = (tab) => tab.input === undefined && /^(Welcome|Walkthrough: )/.test(tab.label)
+
+/** Open the page into an empty editor area, replacing the stock Welcome page; the user's own editors win. */
+async function openOnStartup(api, openWelcome) {
+  if (!api.showOnStartup()) return
+  const tabs = api.tabGroups.all.flatMap((group) => group.tabs)
+  const stock = tabs.filter(isStockWelcome)
+  if (tabs.length > stock.length) return
+  if (stock.length) await api.closeTabs(stock)
+  await openWelcome()
+}
 
 async function runStartup(api, openWelcome) {
   await hideBuiltInChat(api)
   await defaultSideBar(api)
-  if (api.showOnStartup() && editorAreaEmpty(api)) await openWelcome()
+  await openOnStartup(api, openWelcome)
 }
 
 /** The slice of the vscode API the start needs, so the tests can hand in a fake. */
@@ -63,6 +77,7 @@ function apiFrom(vscode, context) {
     agentChatEnabled: () => vscode.workspace.getConfiguration("oyren").get("agentChat.enabled", false) === true,
     showOnStartup: () => vscode.workspace.getConfiguration("oyren.welcome").get("showOnStartup", true) !== false,
     tabGroups: vscode.window.tabGroups,
+    closeTabs: (tabs) => vscode.window.tabGroups.close(tabs),
     workspaceState: context.workspaceState,
   }
 }

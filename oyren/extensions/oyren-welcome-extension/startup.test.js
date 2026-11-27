@@ -5,7 +5,10 @@ const { test } = require("node:test")
 const assert = require("node:assert/strict")
 const { runStartup, SIDE_BAR_LATCH } = require("./startup")
 
-function fakeApi({ agentChat = false, extensions = [], failing = [], latched = false, tabs = 0, showOnStartup = true } = {}) {
+const userTab = { label: "README.md", input: { uri: "file:///home/oyren/workspace/README.md" } }
+const stockWalkthrough = { label: "Walkthrough: Setup VS Code Web", input: undefined }
+
+function fakeApi({ agentChat = false, extensions = [], failing = [], latched = false, tabs = [], showOnStartup = true } = {}) {
   const calls = []
   const state = new Map(latched ? [[SIDE_BAR_LATCH, true]] : [])
   const api = {
@@ -16,7 +19,8 @@ function fakeApi({ agentChat = false, extensions = [], failing = [], latched = f
     hasExtension: (id) => extensions.includes(id),
     agentChatEnabled: () => agentChat,
     showOnStartup: () => showOnStartup,
-    tabGroups: { all: [{ tabs: Array.from({ length: tabs }) }] },
+    tabGroups: { all: [{ tabs }] },
+    closeTabs: async (closed) => void calls.push(["close", ...closed.map((tab) => tab.label)]),
     workspaceState: { get: (key) => state.get(key), update: async (key, value) => void state.set(key, value) },
   }
   return { api, calls, state }
@@ -75,6 +79,22 @@ test("with the Oyren Agent chat switched on, Chat stays and keeps the side bar",
 })
 
 test("the welcome page opens only into an empty editor area, and only while the setting is on", async () => {
-  assert.ok(!(await start({ tabs: 1 })).calls.some(([command]) => command === "open welcome"))
+  assert.ok(!(await start({ tabs: [userTab] })).calls.some(([command]) => command === "open welcome"))
   assert.ok(!(await start({ showOnStartup: false })).calls.some(([command]) => command === "open welcome"))
+})
+
+test("the stock Welcome walkthrough the workbench opened first is replaced by the page", async () => {
+  const { calls } = await start({ tabs: [stockWalkthrough] })
+  assert.deepEqual(calls.slice(-2), [["close", "Walkthrough: Setup VS Code Web"], ["open welcome"]])
+})
+
+test("beside the user's own editors the stock Welcome page is left alone and nothing opens", async () => {
+  const { calls } = await start({ tabs: [stockWalkthrough, userTab] })
+  assert.ok(!calls.some(([command]) => command === "close" || command === "open welcome"))
+})
+
+test("a restored welcome page counts as the user's: no second copy, and nothing is closed", async () => {
+  const restored = { label: "Welcome", input: { viewType: "mainThreadWebview-oyren.welcome" } }
+  const { calls } = await start({ tabs: [restored] })
+  assert.ok(!calls.some(([command]) => command === "close" || command === "open welcome"))
 })
