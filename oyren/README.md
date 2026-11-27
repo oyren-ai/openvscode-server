@@ -11,7 +11,10 @@ This fork ships the Oyren Editor in two layers:
    snapshot or server build —
    - `extensions/` — first-party extensions installed as built-ins:
      `oyren-agent-extension` (the Chat view's default participant + one chat session type per
-     CLI agent), `oyren-welcome-extension` (the onboarding walkthrough), and `oyren-preview`
+     CLI agent; off unless `oyren.agentChat.enabled` is true, since 2026-11-27),
+     `oyren-welcome-extension` (the Codespace welcome page in the middle: this Codespace's facts
+     and every app in it with its icon; its start sequence also hides the built-in Chat view and
+     opens Claude Code, else Codex, in the secondary side bar), and `oyren-preview`
      (a command + status bar item that opens the built-in Simple Browser pointed at
      `http://localhost:<port>` — a mini in-editor preview of the session's own dev server, no
      public route needed).

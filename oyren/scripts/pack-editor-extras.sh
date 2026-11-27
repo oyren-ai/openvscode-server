@@ -31,10 +31,16 @@ cp "$HERE/merge-product.js" "$OUT/pack/scripts/"
 tr -d '[:space:]' < "$ROOT/SERVER_VERSION" > "$OUT/pack/server-version"
 date -u +"%Y-%m-%dT%H:%M:%SZ" > "$OUT/pack/BUILT_AT"
 
-# Unit gate before anything leaves this machine: the agent extension's protocol/provider suite
-# (plain `node --test`, no dependencies — vscode and HTTP are faked/local). Runs on the checkout,
-# deliberately NOT in paid CI; a red suite must never publish.
+# Unit gate before anything leaves this machine: the agent extension's protocol/provider suite and
+# the welcome extension's page/start suite (plain `node --test`, no dependencies — vscode and HTTP
+# are faked/local). Runs on the checkout, deliberately NOT in paid CI; a red suite must never publish.
+# The welcome suite also diffs its Codespace app list against the hosted registry when
+# OYREN_CODESPACE_REPO names an oyren-ai-codespace checkout; set it when you have one.
 ( cd "$ROOT/extensions/oyren-agent-extension" && node --test )
+( cd "$ROOT/extensions/oyren-welcome-extension" && node --test )
+# The JS syntax check below only reaches each extension's top level; the welcome page's script
+# lives in media/.
+for js in "$ROOT"/extensions/*/media/*.js; do if [ -e "$js" ]; then node --check "$js"; fi; done
 
 # Sanity before anything leaves this machine: broken JSON here bricks every new session's editor
 # layer until the next publish.
