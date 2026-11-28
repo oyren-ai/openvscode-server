@@ -9,13 +9,15 @@ const { runsFor } = require("./editorApps")
 const uri = (path) => ({ path })
 const doc = (path, languageId) => ({ uri: uri(path), languageId })
 
-function fakeApi({ editors = [], tabs = [] } = {}) {
+function fakeApi({ editors = [], tabs = [], picked = null } = {}) {
   const calls = []
   const api = {
     executeCommand: async (command, ...args) => void calls.push([command, ...args]),
     showTextDocument: async (target, options) => void calls.push(["show", target.uri ? target.uri.path : target.path, options.viewColumn]),
     visibleTextEditors: () => editors,
     tabGroups: { all: [{ tabs }] },
+    // The editor Quick Open makes active, if `wanted` accepts it (null: nothing picked in time).
+    nextActiveTextEditor: async (wanted) => (picked && wanted(picked) ? picked : null),
   }
   return { api, calls }
 }
@@ -45,8 +47,16 @@ test("a Lean file open in a background tab is brought back in its own group", as
   assert.deepEqual(calls, [["show", "/home/oyren/workspace/Basic.lean", 3], ["lean4.displayGoal"]])
 })
 
-test("with no Lean file open, Quick Open lists the workspace's Lean files and no InfoView command runs", async () => {
-  const { api, calls } = fakeApi({ editors: [{ document: doc("/home/oyren/workspace/a.py", "python"), viewColumn: 1 }] })
-  await showLeanInfoview(api)
-  assert.deepEqual(calls, [["workbench.action.quickOpen", ".lean"]])
+test("with no Lean file open, Quick Open lists the Lean files, and the one picked gets its goals shown", async () => {
+  const python = { document: doc("/home/oyren/workspace/a.py", "python"), viewColumn: 1 }
+  const picked = { document: doc("/home/oyren/workspace/Basic.lean", "lean4"), viewColumn: 1 }
+  const chosen = fakeApi({ editors: [python], picked })
+  await showLeanInfoview(chosen.api)
+  assert.deepEqual(chosen.calls, [["workbench.action.quickOpen", ".lean"], ["lean4.displayGoal"]])
+
+  for (const other of [null, python]) {
+    const none = fakeApi({ editors: [python], picked: other })
+    await showLeanInfoview(none.api)
+    assert.deepEqual(none.calls, [["workbench.action.quickOpen", ".lean"]], "no Lean file picked: no InfoView command")
+  }
 })

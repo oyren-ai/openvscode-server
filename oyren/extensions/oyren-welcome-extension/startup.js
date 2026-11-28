@@ -85,6 +85,12 @@ function apiFrom(vscode, context) {
     closeTabs: (tabs) => vscode.window.tabGroups.close(tabs),
     visibleTextEditors: () => vscode.window.visibleTextEditors,
     showTextDocument: (target, options) => vscode.window.showTextDocument(target, options),
+    /** The next editor that becomes active and passes `wanted`, or null after `ms`. */
+    nextActiveTextEditor: (wanted, ms) => new Promise((resolve) => {
+      const done = (editor) => { clearTimeout(timer); subscription.dispose(); resolve(editor) }
+      const subscription = vscode.window.onDidChangeActiveTextEditor((editor) => { if (editor && wanted(editor)) done(editor) })
+      const timer = setTimeout(() => done(null), ms)
+    }),
     workspaceState: context.workspaceState,
   }
 }
