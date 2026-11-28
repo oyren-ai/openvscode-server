@@ -78,6 +78,8 @@ function apiFrom(vscode, context) {
     showOnStartup: () => vscode.workspace.getConfiguration("oyren.welcome").get("showOnStartup", true) !== false,
     tabGroups: vscode.window.tabGroups,
     closeTabs: (tabs) => vscode.window.tabGroups.close(tabs),
+    visibleTextEditors: () => vscode.window.visibleTextEditors,
+    showTextDocument: (target, options) => vscode.window.showTextDocument(target, options),
     workspaceState: context.workspaceState,
   }
 }

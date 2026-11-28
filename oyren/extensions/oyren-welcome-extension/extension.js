@@ -3,6 +3,7 @@ const { apiFrom, runStartup, hideBuiltInChat } = require("./startup")
 const { handleMessage } = require("./messages")
 const { pageModel, localResourceRoots } = require("./pageModel")
 const { renderPage } = require("./page")
+const { LEAN_INFOVIEW_COMMAND, showLeanInfoview } = require("./lean")
 
 /**
  * The Codespace's welcome page (owner, 2026-11-27): this Codespace's facts and every app in it, in
@@ -22,6 +23,8 @@ function activate(context) {
   const show = () => showPanel(context, api)
   context.subscriptions.push(
     vscode.commands.registerCommand("oyren.welcome.open", show),
+    // The Lean 4 card's step (editorApps.js); not in the Command Palette.
+    vscode.commands.registerCommand(LEAN_INFOVIEW_COMMAND, () => showLeanInfoview(api)),
     vscode.window.registerWebviewPanelSerializer(VIEW_TYPE, {
       deserializeWebviewPanel: async (restored) => adopt(context, api, restored),
     }),

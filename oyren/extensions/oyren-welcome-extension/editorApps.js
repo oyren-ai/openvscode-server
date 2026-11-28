@@ -5,7 +5,9 @@
 // version renamed falls through instead of failing.
 //
 // The page sends only an app id; the commands live here, so a page message can never pick one.
-const app = (id, label, blurb, run, extra = {}) => Object.freeze({ id, label, blurb, run: Object.freeze(run), ...extra })
+const { LEAN_INFOVIEW_COMMAND } = require("./lean")
+
+const app =(id, label, blurb, run, extra = {}) => Object.freeze({ id, label, blurb, run: Object.freeze(run), ...extra })
 const step = (command, ...args) => Object.freeze({ command, args })
 
 const EDITOR_APPS = Object.freeze([
@@ -18,8 +20,9 @@ const EDITOR_APPS = Object.freeze([
   app("qwen", "Qwen Code", "Qwen's coding agent, in the side bar.",
     [step("qwen-code.focusChat"), step("workbench.view.extension.qwen-code-sidebar")],
     { extension: "qwenlm.qwen-code-vscode-ide-companion" }),
+  // Not lean4.toggleInfoview: it closes an open InfoView, and opens none while this page is active (lean.js).
   app("lean", "Lean 4", "Goals and messages for Lean files, in the InfoView beside the editor.",
-    [step("lean4.toggleInfoview")], { extension: "leanprover.lean4" }),
+    [step(LEAN_INFOVIEW_COMMAND)], { extension: "leanprover.lean4" }),
   app("agent", "Agent terminal", "The tmux session the launch agent runs in, the one the Codespace Terminal shows.",
     [step("workbench.action.terminal.newWithProfile", { profileName: "Agent" })], { tile: "agent" }),
   app("terminal", "Terminal", "A plain bash shell on this machine.",
