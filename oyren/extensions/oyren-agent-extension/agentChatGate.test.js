@@ -1,6 +1,7 @@
 // The Oyren Agent chat is retired by default (owner, 2026-11-27): Codespaces use the Claude Code and
 // Codex panels instead. Every contribution the Chat view could show must sit behind one setting that
-// defaults to off, and activation must register nothing unless that setting is on.
+// defaults to off, and activation must register none of the chat unless that setting is on
+// (extension.test.js runs activate() itself).
 const { test } = require("node:test")
 const assert = require("node:assert/strict")
 const manifest = require("./package.json")

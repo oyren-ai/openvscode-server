@@ -24,7 +24,7 @@
     "_comment.configuration": [
       "Retired by default (owner, 2026-11-27): Codespaces show the Claude Code and Codex panels in the",
       "secondary side bar instead. Every contribution below carries when: config.oyren.agentChat.enabled",
-      "and activate() registers nothing while it is off (agentChatGate.js), so the workbench sees no",
+      "and activate() registers none of the chat while it is off (agentChatGate.js), so the workbench sees no",
       "default participant. The extension still ships, under its old folder name, so the editor-extras",
       "boot overlay replaces the copy baked into existing images and the switch also reaches them."
     ],

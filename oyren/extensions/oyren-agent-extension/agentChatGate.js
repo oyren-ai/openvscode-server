@@ -3,7 +3,8 @@
 //
 // Two halves keep it off: package.json gates every contribution the workbench reads without running
 // us (the default participant, the chat session types, the model vendor) on WHEN, and activate()
-// registers nothing while this returns false. Built-in Chat is then left with no default
+// registers none of the chat while this returns false (the rest of activate() still runs). Built-in
+// Chat is then left with no default
 // participant; the welcome extension hides the Chat view itself (oyren-welcome-extension/startup.js).
 // Flipping the setting takes effect on the next editor reload.
 const SETTING_SECTION = "oyren"
