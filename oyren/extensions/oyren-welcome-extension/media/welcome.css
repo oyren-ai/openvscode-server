@@ -49,18 +49,19 @@ footer .hint { margin: 8px 0 0; }
 .fill-accent-hover { fill: rgba(118, 36, 244, 0.878); }
 .fill-background { fill: #fcfcfe; }
 
-/* Tiles, dark and high contrast (the hosted dark palette). */
-body.vscode-dark .mark path, body.vscode-high-contrast .mark path { fill: #ccf500; }
-body.vscode-dark .tile, body.vscode-high-contrast .tile { filter: none; }
-body.vscode-dark .plate, body.vscode-high-contrast .plate { fill: #262626; }
-body.vscode-dark .ring, body.vscode-high-contrast .ring { stroke: rgba(255, 255, 255, 0.1); }
-body.vscode-dark .stroke-terminal, body.vscode-high-contrast .stroke-terminal { stroke: #34d399; }
-body.vscode-dark .stroke-chat, body.vscode-high-contrast .stroke-chat { stroke: #fbbf24; }
-body.vscode-dark .stroke-primary, body.vscode-high-contrast .stroke-primary { stroke: #c8ff00; }
-body.vscode-dark .fill-zed, body.vscode-high-contrast .fill-zed { fill: #fff; }
-body.vscode-dark .fill-primary, body.vscode-high-contrast .fill-primary { fill: #c8ff00; }
-body.vscode-dark .fill-accent-border, body.vscode-high-contrast .fill-accent-border { fill: rgba(200, 255, 0, 0.125); }
-body.vscode-dark .fill-accent-hover, body.vscode-high-contrast .fill-accent-hover { fill: rgba(200, 255, 0, 0.878); }
-body.vscode-dark .fill-background, body.vscode-high-contrast .fill-background { fill: #0a0a0a; }
+/* Tiles, dark and dark high contrast (the hosted dark palette). The webview host gives Light High
+   Contrast both vscode-high-contrast and vscode-high-contrast-light; that one keeps the light palette. */
+body.vscode-dark .mark path, body.vscode-high-contrast:not(.vscode-high-contrast-light) .mark path { fill: #ccf500; }
+body.vscode-dark .tile, body.vscode-high-contrast:not(.vscode-high-contrast-light) .tile { filter: none; }
+body.vscode-dark .plate, body.vscode-high-contrast:not(.vscode-high-contrast-light) .plate { fill: #262626; }
+body.vscode-dark .ring, body.vscode-high-contrast:not(.vscode-high-contrast-light) .ring { stroke: rgba(255, 255, 255, 0.1); }
+body.vscode-dark .stroke-terminal, body.vscode-high-contrast:not(.vscode-high-contrast-light) .stroke-terminal { stroke: #34d399; }
+body.vscode-dark .stroke-chat, body.vscode-high-contrast:not(.vscode-high-contrast-light) .stroke-chat { stroke: #fbbf24; }
+body.vscode-dark .stroke-primary, body.vscode-high-contrast:not(.vscode-high-contrast-light) .stroke-primary { stroke: #c8ff00; }
+body.vscode-dark .fill-zed, body.vscode-high-contrast:not(.vscode-high-contrast-light) .fill-zed { fill: #fff; }
+body.vscode-dark .fill-primary, body.vscode-high-contrast:not(.vscode-high-contrast-light) .fill-primary { fill: #c8ff00; }
+body.vscode-dark .fill-accent-border, body.vscode-high-contrast:not(.vscode-high-contrast-light) .fill-accent-border { fill: rgba(200, 255, 0, 0.125); }
+body.vscode-dark .fill-accent-hover, body.vscode-high-contrast:not(.vscode-high-contrast-light) .fill-accent-hover { fill: rgba(200, 255, 0, 0.878); }
+body.vscode-dark .fill-background, body.vscode-high-contrast:not(.vscode-high-contrast-light) .fill-background { fill: #0a0a0a; }
 
 @media (max-width: 560px) { main { padding: 24px 16px 32px; } .hero h1 { font-size: 22px; } }
