@@ -30,6 +30,7 @@ function activate(context) {
     }),
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration(AGENT_CHAT_SETTING)) void hideBuiltInChat(api)
+      if (event.affectsConfiguration("oyren.welcome.showOnStartup") && panel) sendShowOnStartup(api, panel)
     }),
   )
   runStartup(api, async () => show()).catch((err) => console.error(`oyren-welcome: start failed: ${err && err.message}`))
@@ -52,13 +53,19 @@ function adopt(context, api, created) {
   created.webview.options = options(context)
   created.webview.html = renderPage(pageModel({ vscode, context, webview: created.webview, showOnStartup: api.showOnStartup() }))
   created.webview.onDidReceiveMessage((message) => {
+    // The page asks for the setting each time it loads (its HTML may be older than the setting).
+    if (message && message.type === "ready") return sendShowOnStartup(api, created)
     handleMessage(api, message, saveShowOnStartup).catch((err) => {
       // A save that fails (a user settings.json with a syntax error, say): say so, and put the box back.
       void vscode.window.showErrorMessage(`Oyren Welcome could not save the setting: ${err && err.message}`)
-      void created.webview.postMessage({ type: "showOnStartup", value: api.showOnStartup() })
+      sendShowOnStartup(api, created)
     })
   }, null, context.subscriptions)
   created.onDidDispose(() => { if (panel === created) panel = null }, null, context.subscriptions)
+}
+
+function sendShowOnStartup(api, target) {
+  void target.webview.postMessage({ type: "showOnStartup", value: api.showOnStartup() })
 }
 
 function saveShowOnStartup(value) {

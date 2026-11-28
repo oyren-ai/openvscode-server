@@ -9,20 +9,12 @@
   })
   const box = document.getElementById("show-on-startup")
   if (!box) return
-  // The page is rebuilt from its first HTML each time its tab is shown again, so the box keeps its
-  // own state; the extension sends the setting back when a save fails.
-  const show = (value) => {
-    box.checked = value
-    vscode.setState({ showOnStartup: value })
-  }
-  const kept = vscode.getState()
-  if (kept && typeof kept.showOnStartup === "boolean") box.checked = kept.showOnStartup
-  box.addEventListener("change", () => {
-    show(box.checked)
-    vscode.postMessage({ type: "showOnStartup", value: box.checked })
-  })
+  // The page is rebuilt from its first HTML each time its tab is shown again, so it asks for the
+  // setting as it is now ("ready"). The extension also sends it when it changes or a save fails.
   window.addEventListener("message", (event) => {
     const message = event.data
-    if (message && message.type === "showOnStartup" && typeof message.value === "boolean") show(message.value)
+    if (message && message.type === "showOnStartup" && typeof message.value === "boolean") box.checked = message.value
   })
+  box.addEventListener("change", () => vscode.postMessage({ type: "showOnStartup", value: box.checked }))
+  vscode.postMessage({ type: "ready" })
 })()
