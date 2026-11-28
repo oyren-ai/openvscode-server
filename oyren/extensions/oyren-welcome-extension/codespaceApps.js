@@ -6,7 +6,9 @@
 //   WorkbenchAppIcons.tsx  WORKBENCH_LABELS (one name per app, everywhere)
 //   info/appInfo.ts        APP_INFO (the blurbs below shorten its General pages)
 //   icons/tiles.tsx and icons/brandPaths.ts  the tiles (tiles.js, brandMarks.js)
-// Home is chrome rather than an app, and "fleet" now opens Chat, so neither is listed.
+// Home is chrome rather than an app, and "fleet" now opens Chat, so neither is listed. Slides and
+// Sheets are still in the hosted registry but no longer in the image (composer 2d388735 and
+// 422068e5, 2026-11-24, on dev and main), so they are left out too (NOT_IN_THE_IMAGE).
 //
 // The editor cannot open these windows itself (it is a window inside the Codespace, with no channel
 // to the dock), so the page shows them as a map of the Codespace, not as buttons.
@@ -25,7 +27,7 @@ const app = (id, label, opened, blurb) => Object.freeze({ id, label, opened, blu
 
 const CODESPACE_APPS = Object.freeze([
   app("zed", "Zed", "dock",
-    "A native editor on this machine, streamed as pixels. One editor runs at a time, so opening Zed switches from VS Code."),
+    "A native editor streamed as pixels, on xl and larger Codespaces. One editor runs at a time, so it switches from VS Code."),
   app("vscode", "VS Code", "dock",
     "openvscode-server on this machine, drawn in your browser. Extensions install here and survive a reload."),
   app("terminal", "Terminal", "dock",
@@ -38,12 +40,11 @@ const CODESPACE_APPS = Object.freeze([
     "Chromium on the machine itself: localhost here is this Codespace, so agent logins and your dev server work."),
   app("docs", "Docs", "dock",
     "Step-by-step Codespace guides to keep beside your agent or editor."),
-  app("slides", "Slides", "command",
-    "Slidev decks saved in this Codespace, with a preview of the running deck."),
-  app("sheets", "Sheets", "command",
-    "LibreOffice Calc on the Codespace desktop. `oyren sheets file.xlsx` in the Codespace Terminal opens a file."),
   app("files", "Files", "command",
     "A file manager (pcmanfm) opened at /workspace. `oyren files` in the Codespace Terminal opens it too."),
 ])
 
-module.exports = { CODESPACE_APPS, HOSTED_SOURCES }
+/** Windows the hosted registry still names that the image no longer has. */
+const NOT_IN_THE_IMAGE = Object.freeze(["slides", "sheets"])
+
+module.exports = { CODESPACE_APPS, HOSTED_SOURCES, NOT_IN_THE_IMAGE }

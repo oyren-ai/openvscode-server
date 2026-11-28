@@ -40,8 +40,6 @@ const TILES = Object.freeze({
   deepseek: mark(`<path fill="#4D6BFE" d="${DEEPSEEK_MARK}"/>`),
   browser: mark(chromium),
   docs: glyph("primary", GLYPHS.docs),
-  slides: lucide(LUCIDE.slides),
-  sheets: lucide(LUCIDE.sheets),
   files: lucide(LUCIDE.files),
   agent: glyph("chat", SPARKLE),
   preview: glyph("primary", WINDOW),
