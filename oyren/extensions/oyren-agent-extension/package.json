@@ -1,8 +1,8 @@
 {
   "name": "oyren-agent",
   "displayName": "Oyren Agent",
-  "description": "The sandbox agents behind VS Code's built-in Chat view — one chat that combines every CLI agent.",
-  "version": "0.2.0",
+  "description": "The sandbox agents behind VS Code's built-in Chat view — one chat that combines every CLI agent. Off unless oyren.agentChat.enabled is true.",
+  "version": "0.3.0",
   "publisher": "oyren",
   "private": true,
   "license": "UNLICENSED",
@@ -21,6 +21,24 @@
   ],
   "enabledApiProposals": ["defaultChatParticipant", "chatProvider", "chatSessionsProvider"],
   "contributes": {
+    "_comment.configuration": [
+      "Retired by default (owner, 2026-11-27): Codespaces show the Claude Code and Codex panels in the",
+      "secondary side bar instead. Every contribution below carries when: config.oyren.agentChat.enabled",
+      "and activate() registers none of the chat while it is off (agentChatGate.js), so the workbench sees no",
+      "default participant. The extension still ships, under its old folder name, so the editor-extras",
+      "boot overlay replaces the copy baked into existing images and the switch also reaches them."
+    ],
+    "configuration": {
+      "title": "Oyren Agent",
+      "properties": {
+        "oyren.agentChat.enabled": {
+          "type": "boolean",
+          "default": false,
+          "scope": "machine",
+          "description": "Show the Oyren Agent chat (one chat for every CLI agent) in the built-in Chat view. Off by default: Codespaces use the Claude Code and Codex panels instead. A machine setting, so a repository's own .vscode/settings.json cannot turn it on; Codespaces rewrite their machine settings at every editor start, so set here it lasts until then. Takes effect after a reload."
+        }
+      }
+    },
     "_comment.chatParticipants": [
       "The default participant is the LAUNCH agent and claims all three modes: the panel opens in",
       "Agent mode (hardcoded default), and getDefaultAgent filters by mode — an ask-only default",
@@ -41,7 +59,7 @@
     ],
     "_comment.commands": "Slash launches: /codex <task> starts a NEW PAID SESSION running that agent with the task as its first message (docs/oyren-chat-launch.md). The descriptions say so — a user must never learn about the charge from the invoice.",
     "chatParticipants": [
-      { "id": "oyren.agent", "name": "oyren", "fullName": "Oyren", "description": "Ask the sandbox agent — one chat for every CLI agent.", "isDefault": true, "isSticky": false, "modes": ["ask", "agent", "edit"],
+      { "id": "oyren.agent", "name": "oyren", "fullName": "Oyren", "description": "Ask the sandbox agent — one chat for every CLI agent.", "isDefault": true, "isSticky": false, "modes": ["ask", "agent", "edit"], "when": "config.oyren.agentChat.enabled",
         "commands": [
           { "name": "claude", "description": "Launch a NEW paid session running Claude Code, with your message as its first task." },
           { "name": "codex", "description": "Launch a NEW paid session running Codex, with your message as its first task." },
@@ -61,13 +79,13 @@
       "oyren.4 fall back to the built-in terminal codicon; monochrome marks ship a per-theme pair."
     ],
     "chatSessions": [
-      { "type": "codex-cli", "name": "codex", "displayName": "codex", "description": "New Codex chat on this workspace.", "icon": { "light": "media/agents/codex-light.svg", "dark": "media/agents/codex-dark.svg" }, "canDelegate": true },
-      { "type": "cursor-cli", "name": "cursor", "displayName": "cursor", "description": "New Cursor chat on this workspace.", "icon": { "light": "media/agents/cursor.svg", "dark": "media/agents/cursor.svg" }, "canDelegate": true },
-      { "type": "gemini-cli", "name": "gemini", "displayName": "gemini", "description": "New Gemini chat on this workspace.", "icon": { "light": "media/agents/gemini.svg", "dark": "media/agents/gemini.svg" }, "canDelegate": true },
-      { "type": "opencode", "name": "opencode", "displayName": "opencode", "description": "New opencode chat on this workspace.", "icon": { "light": "media/agents/opencode-light.svg", "dark": "media/agents/opencode-dark.svg" }, "canDelegate": true },
-      { "type": "qwen-code", "name": "qwen", "displayName": "qwen", "description": "New Qwen chat on this workspace.", "icon": { "light": "media/agents/qwen.svg", "dark": "media/agents/qwen.svg" }, "canDelegate": true },
-      { "type": "antigravity-cli", "name": "antigravity", "displayName": "antigravity", "description": "New Antigravity chat on this workspace.", "icon": { "light": "media/agents/antigravity.svg", "dark": "media/agents/antigravity.svg" }, "canDelegate": true }
+      { "type": "codex-cli", "name": "codex", "displayName": "codex", "description": "New Codex chat on this workspace.", "icon": { "light": "media/agents/codex-light.svg", "dark": "media/agents/codex-dark.svg" }, "canDelegate": true, "when": "config.oyren.agentChat.enabled" },
+      { "type": "cursor-cli", "name": "cursor", "displayName": "cursor", "description": "New Cursor chat on this workspace.", "icon": { "light": "media/agents/cursor.svg", "dark": "media/agents/cursor.svg" }, "canDelegate": true, "when": "config.oyren.agentChat.enabled" },
+      { "type": "gemini-cli", "name": "gemini", "displayName": "gemini", "description": "New Gemini chat on this workspace.", "icon": { "light": "media/agents/gemini.svg", "dark": "media/agents/gemini.svg" }, "canDelegate": true, "when": "config.oyren.agentChat.enabled" },
+      { "type": "opencode", "name": "opencode", "displayName": "opencode", "description": "New opencode chat on this workspace.", "icon": { "light": "media/agents/opencode-light.svg", "dark": "media/agents/opencode-dark.svg" }, "canDelegate": true, "when": "config.oyren.agentChat.enabled" },
+      { "type": "qwen-code", "name": "qwen", "displayName": "qwen", "description": "New Qwen chat on this workspace.", "icon": { "light": "media/agents/qwen.svg", "dark": "media/agents/qwen.svg" }, "canDelegate": true, "when": "config.oyren.agentChat.enabled" },
+      { "type": "antigravity-cli", "name": "antigravity", "displayName": "antigravity", "description": "New Antigravity chat on this workspace.", "icon": { "light": "media/agents/antigravity.svg", "dark": "media/agents/antigravity.svg" }, "canDelegate": true, "when": "config.oyren.agentChat.enabled" }
     ],
-    "languageModelChatProviders": [{ "vendor": "oyren", "displayName": "Oyren" }]
+    "languageModelChatProviders": [{ "vendor": "oyren", "displayName": "Oyren", "when": "config.oyren.agentChat.enabled" }]
   }
 }

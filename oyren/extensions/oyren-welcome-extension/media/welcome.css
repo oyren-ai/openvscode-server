@@ -1,0 +1,67 @@
+/* The welcome page. Layout and text follow the editor's own theme variables; the app tiles use the
+   hosted Codespace palette (theme/tokens.css): violet primary in light, lime in dark. */
+body { margin: 0; color: var(--vscode-foreground); background: var(--vscode-editor-background);
+  font-family: var(--vscode-font-family); font-size: 13px; line-height: 1.45; }
+main { max-width: 1000px; margin: 0 auto; padding: 40px 32px 48px; }
+.hero { display: flex; align-items: center; gap: 18px; }
+.hero h1 { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.01em; }
+.hero .sub { margin: 4px 0 0; color: var(--vscode-descriptionForeground); font-size: 14px; word-break: break-word; }
+.mark { width: 64px; height: 33px; flex: none; }
+.mark path { fill: #7624f4; }
+section { margin-top: 32px; }
+h2 { margin: 0 0 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--vscode-descriptionForeground); }
+h3 { margin: 18px 0 8px; font-size: 12px; font-weight: 600; color: var(--vscode-descriptionForeground); }
+.hint { margin: 0 0 10px; color: var(--vscode-descriptionForeground); }
+.facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px 24px; margin: 10px 0 0;
+  padding: 14px 16px; border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.3)); border-radius: 10px; }
+.facts dt { color: var(--vscode-descriptionForeground); font-size: 12px; }
+.facts dd { margin: 1px 0 0; word-break: break-word; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.card { display: flex; align-items: flex-start; gap: 12px; box-sizing: border-box; width: 100%; height: 100%; padding: 12px;
+  border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.3)); border-radius: 10px;
+  background: transparent; color: inherit; font: inherit; text-align: left; }
+button.card { cursor: pointer; }
+button.card:hover { background: var(--vscode-list-hoverBackground); }
+button.card:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: 1px; }
+.tile { width: 40px; height: 40px; flex: none; filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.1)); }
+img.tile { border-radius: 9px; object-fit: contain; filter: none; }
+.text { min-width: 0; }
+.name { display: block; font-weight: 600; }
+.blurb { display: block; margin-top: 2px; color: var(--vscode-descriptionForeground); }
+.here { display: inline-block; margin-top: 6px; padding: 0 7px; border-radius: 999px; font-size: 11px;
+  background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
+code { font-family: var(--vscode-editor-font-family); font-size: 0.95em; padding: 0 4px; border-radius: 4px;
+  background: var(--vscode-textCodeBlock-background, rgba(128, 128, 128, 0.15)); }
+footer { margin-top: 32px; padding-top: 14px; border-top: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.3)); }
+.startup { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+footer .hint { margin: 8px 0 0; }
+
+/* Tiles, light (the hosted light palette). */
+.plate { fill: #fff; }
+.ring { stroke: rgba(0, 0, 0, 0.1); }
+.stroke-terminal { stroke: #059669; }
+.stroke-chat { stroke: #f59e0b; }
+.stroke-primary { stroke: #7624f4; }
+.fill-zed { fill: #171717; }
+.fill-primary { fill: #7624f4; }
+.fill-accent-border { fill: rgba(118, 36, 244, 0.125); }
+.fill-accent-hover { fill: rgba(118, 36, 244, 0.878); }
+.fill-background { fill: #fcfcfe; }
+
+/* Tiles, dark and dark high contrast (the hosted dark palette). The webview host gives Light High
+   Contrast both vscode-high-contrast and vscode-high-contrast-light; that one keeps the light palette. */
+body.vscode-dark .mark path, body.vscode-high-contrast:not(.vscode-high-contrast-light) .mark path { fill: #ccf500; }
+body.vscode-dark .tile, body.vscode-high-contrast:not(.vscode-high-contrast-light) .tile { filter: none; }
+body.vscode-dark .plate, body.vscode-high-contrast:not(.vscode-high-contrast-light) .plate { fill: #262626; }
+body.vscode-dark .ring, body.vscode-high-contrast:not(.vscode-high-contrast-light) .ring { stroke: rgba(255, 255, 255, 0.1); }
+body.vscode-dark .stroke-terminal, body.vscode-high-contrast:not(.vscode-high-contrast-light) .stroke-terminal { stroke: #34d399; }
+body.vscode-dark .stroke-chat, body.vscode-high-contrast:not(.vscode-high-contrast-light) .stroke-chat { stroke: #fbbf24; }
+body.vscode-dark .stroke-primary, body.vscode-high-contrast:not(.vscode-high-contrast-light) .stroke-primary { stroke: #c8ff00; }
+body.vscode-dark .fill-zed, body.vscode-high-contrast:not(.vscode-high-contrast-light) .fill-zed { fill: #fff; }
+body.vscode-dark .fill-primary, body.vscode-high-contrast:not(.vscode-high-contrast-light) .fill-primary { fill: #c8ff00; }
+body.vscode-dark .fill-accent-border, body.vscode-high-contrast:not(.vscode-high-contrast-light) .fill-accent-border { fill: rgba(200, 255, 0, 0.125); }
+body.vscode-dark .fill-accent-hover, body.vscode-high-contrast:not(.vscode-high-contrast-light) .fill-accent-hover { fill: rgba(200, 255, 0, 0.878); }
+body.vscode-dark .fill-background, body.vscode-high-contrast:not(.vscode-high-contrast-light) .fill-background { fill: #0a0a0a; }
+
+@media (max-width: 560px) { main { padding: 24px 16px 32px; } .hero h1 { font-size: 22px; } }

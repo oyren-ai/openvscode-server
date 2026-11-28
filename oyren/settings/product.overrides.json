@@ -1,0 +1,47 @@
+{
+  "_comment": [
+    "Branding overrides merged into openvscode-server's product.json by install-editor.sh.",
+    "Code-OSS is MIT, which permits rebranding; rebranding is also how we stop shipping Microsoft's",
+    "trademarks, which we are NOT licensed to use. Only display strings and links are overridden.",
+    "",
+    "Deliberately NOT overridden:",
+    "  extensionsGallery      - must stay Open VSX. Pointing a non-Microsoft product at the VS Code",
+    "                           Marketplace violates its terms of use.",
+    "  dataFolderName /       - these decide where the server writes its data. Renaming them moves",
+    "  serverDataFolderName     ~/.openvscode-server, which is exactly where install-editor.sh seeds",
+    "                           the machine settings, so they must move together or not at all.",
+    "  applicationName        - the CLI binary and its bundled helper scripts resolve by this name.",
+    "",
+    "Keys starting with _ are stripped before merging. A key set to null is DELETED from product.json",
+    "rather than set to null — see defaultChatAgent below."
+  ],
+  "nameShort": "Oyren",
+  "nameLong": "Oyren Editor",
+  "reportIssueUrl": "https://oyren.ai/contact",
+  "documentationUrl": "https://oyren.ai/guides",
+  "licenseUrl": "https://oyren.ai/terms",
+  "privacyStatementUrl": "https://oyren.ai/privacy",
+  "releaseNotesUrl": "https://oyren.ai",
+  "requestFeatureUrl": "https://oyren.ai/contact",
+  "twitterUrl": "",
+  "introductoryVideosUrl": "",
+  "tipsAndTricksUrl": "",
+  "newsletterSignupUrl": "",
+
+  "_comment.defaultChatAgent": [
+    "GitHub Copilot. This key names the chat agent the workbench sets itself up for — Copilot setup",
+    "prompts, GitHub sign-in, and a built-in setup agent that intercepts Chat requests.",
+    "",
+    "KNOW ITS LIMIT: deleting it here reaches only SERVER-side readers. The browser workbench gets",
+    "its product config INLINED AT BUILD TIME (gulpfile.reh.ts -> product.ts substitution), so this",
+    "deletion cannot remove the Copilot chat gating from a stock tarball — that removal lives in",
+    "our fork's patches (github.com/oyren-ai/openvscode-server, branch oyren/1.109). This entry is",
+    "kept as belt-and-braces for server-side consumers and for any future build that reads the",
+    "runtime product.json.",
+    "",
+    "trustedExtensionAuthAccess: pre-authorises Copilot's extensions to take GitHub auth sessions",
+    "without asking; same treatment."
+  ],
+  "defaultChatAgent": null,
+  "trustedExtensionAuthAccess": null
+}

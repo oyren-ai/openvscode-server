@@ -1,0 +1,5 @@
+# The root .gitignore (upstream VS Code's) ignores product.overrides.json everywhere, meaning its own
+# dev-time override file at the repo root. This one is the Oyren Editor's branding, packed into
+# editor-extras and required by composer's install-editor.sh, so it stays tracked. (It was ignored,
+# hence never committed, until 2026-11-27; the pack script then failed on a clean checkout.)
+!product.overrides.json

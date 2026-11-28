@@ -11,7 +11,14 @@ This fork ships the Oyren Editor in two layers:
    snapshot or server build —
    - `extensions/` — first-party extensions installed as built-ins:
      `oyren-agent-extension` (the Chat view's default participant + one chat session type per
-     CLI agent), `oyren-welcome-extension` (the onboarding walkthrough), and `oyren-preview`
+     CLI agent; off unless `oyren.agentChat.enabled` is true, since 2026-11-27. It is a machine
+     setting, and the boot overlay rewrites a Codespace's machine settings from
+     `settings/machine-settings.json` at every editor start: to bring the chat back for every
+     Codespace, set it there and publish; set in one Codespace's Remote settings, it lasts until that
+     Codespace's next editor start),
+     `oyren-welcome-extension` (the Codespace welcome page in the middle: this Codespace's facts
+     and every app in it with its icon; its start sequence also hides the built-in Chat view and
+     opens Claude Code, else Codex, in the secondary side bar), and `oyren-preview`
      (a command + status bar item that opens the built-in Simple Browser pointed at
      `http://localhost:<port>` — a mini in-editor preview of the session's own dev server, no
      public route needed).
@@ -25,11 +32,15 @@ This fork ships the Oyren Editor in two layers:
 ## Shipping a change
 
 ```
-oyren/scripts/pack-editor-extras.sh
+oyren/scripts/pack-editor-extras.sh --pack-only <dir>                         # prints the sha256, S
+oyren/scripts/pack-editor-extras.sh --upload <dir>/oyren-editor-extras.tar.gz S
 ```
 
-packs this directory into `oyren-editor-extras.tar.gz` and uploads it to the rolling
-`editor-extras` prerelease. Droplet sessions run `oyren-editor-update --boot` (systemd
+packs this directory into `oyren-editor-extras.tar.gz`, runs the extension suites, and then
+uploads exactly those bytes to the rolling `editor-extras` prerelease, after composer's pin names S
+(the runbook below). The script with no argument still packs and uploads in one go, but nothing
+then ties the published bytes to a pin, so it is for a throwaway test, not a release. Droplet
+sessions run `oyren-editor-update --boot` (systemd
 `ExecStartPre` of `oyren-editor.service`) which fetches that tarball, swaps the server if
 `server-version` changed, overlays the extensions, and re-seeds settings. Inside a live session,
 plain `oyren-editor-update` does the same and restarts the editor. The snapshot bake downloads
@@ -37,6 +48,56 @@ the same tarball for its offline fallback, so the release is the single source o
 
 The boot plumbing (`oyren-editor-update`, the server-swap helper, systemd units, bake scripts)
 lives in the private `oyren-ai-composer` repo, which owns the droplet image.
+
+### Publishing a change: runbook and rollback
+
+Publishing is a production release. Every Codespace, on dev and production, installs the new layer
+at its next editor start, and the boot overlay applies the asset without any hash check. Only the
+bytes a snapshot bake installs are pinned: `EDITOR_EXTRAS_SHA256` in composer's `deploy/versions.env`,
+read from the branch the bake runs on. Dev bakes run on composer `dev`. Only a bake on composer `main`
+may register images with production. So the pin must match the asset on both branches. A bake on a
+branch whose pin does not match fails closed at the editor-extras hash check; it never installs other
+bytes. Bakes are only dispatched by hand (`bake-snapshots.yml` has no schedule), so dispatch none
+between steps 5 and 7.
+
+1. Merge the change into `oyren/1.109`.
+2. Keep the asset that is live now, in a directory of its own (`<keep>`):
+   `gh release download editor-extras --repo oyren-ai/openvscode-server -p oyren-editor-extras.tar.gz -D <keep>`.
+   Note its sha256, K.
+3. From a clean checkout of the merged `oyren/1.109`, pack into another directory (`<new>`):
+   `OYREN_CODESPACE_REPO=<oyren-ai-codespace checkout at origin/dev> oyren/scripts/pack-editor-extras.sh --pack-only <new>`.
+   Check that both suites passed. It prints the new sha256, S.
+4. Open the composer PRs that set `EDITOR_EXTRAS_SHA256=S`:
+   - one into `dev`;
+   - its way to `main`: the next composer release PR (`release/composer-<dev sha>`) once the dev PR is
+     in, or, if dev is not ready to release, a PR into `main` that changes only that line.
+
+   Check that no bake is running, queued or waiting; this must print nothing:
+   `gh run list --repo oyren-ai/oyren-ai-composer --workflow bake-snapshots.yml --limit 20 --json status,databaseId --jq '.[] | select(.status != "completed")'`
+5. Upload exactly those bytes: `oyren/scripts/pack-editor-extras.sh --upload <new>/oyren-editor-extras.tar.gz S`.
+   It refuses a file whose sha256 is not S. Then
+   `gh api repos/oyren-ai/openvscode-server/releases/tags/editor-extras --jq '.assets[] | select(.name == "oyren-editor-extras.tar.gz") | .digest'`
+   must print `sha256:S`.
+6. Merge the composer `dev` PR. Dev bakes pass again.
+7. Merge the change into composer `main`. Production bakes pass again.
+8. Check on oyren.dev: a new Codespace starts on the new layer. A running one keeps its editor until
+   its next editor start, or until `oyren-editor-update` runs in its terminal.
+
+**Rollback.** It has to stick. This script packs whatever `oyren/1.109` holds, so while the change
+stays merged there, the next routine publish from that branch ships it again to every Codespace.
+
+1. Upload the kept asset: `oyren/scripts/pack-editor-extras.sh --upload <keep>/oyren-editor-extras.tar.gz K`.
+   New editor starts get the previous layer.
+2. Revert the change on `oyren/1.109`, but not the release tooling it may carry (this script,
+   `oyren/settings/`, this README): reverting those would leave the next publish without the
+   digest and clean-tree checks, or without `settings/product.overrides.json`. On a branch from
+   `oyren/1.109`: `git revert --no-commit <the change's commit>` (`-m 1` for a merge commit), then
+   `git checkout HEAD -- oyren/scripts oyren/settings oyren/README.md`, commit, and open the revert
+   PR. Its diff should touch only `oyren/extensions/`, and undo nothing a later PR added there (such
+   as #16's terminal paste). Publish nothing from `oyren/1.109` until it is merged.
+3. Put the pin back to K on composer `dev` (revert the dev PR), and on `main` if step 7 happened (a PR
+   into `main` that changes only that line). As on the way up, a bake on a branch whose pin does not
+   match the asset fails closed until its PR is merged.
 
 ## Notes
 
