@@ -15,6 +15,13 @@ test("the setting exists, is a boolean and defaults to off", () => {
   assert.equal(setting.default, false)
 })
 
+// Workspace trust is off in Codespaces (machine-settings.json), so nothing filters a cloned repo's
+// .vscode/settings.json: a window-scoped switch would let repository content bring the chat back.
+// VS Code ignores machine-scoped settings in workspace and folder settings.
+test("a repository's workspace settings cannot turn it on", () => {
+  assert.equal(manifest.contributes.configuration.properties[`${SETTING_SECTION}.${SETTING_KEY}`].scope, "machine")
+})
+
 test("the when clause names that same setting", () => {
   assert.equal(WHEN, `config.${SETTING_SECTION}.${SETTING_KEY}`)
 })

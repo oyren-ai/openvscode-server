@@ -3,7 +3,7 @@
 // editor area is empty.
 const { test } = require("node:test")
 const assert = require("node:assert/strict")
-const { runStartup, SIDE_BAR_LATCH } = require("./startup")
+const { runStartup, apiFrom, SIDE_BAR_LATCH, AGENT_CHAT_SETTING } = require("./startup")
 
 const userTab = { label: "README.md", input: { uri: "file:///home/oyren/workspace/README.md" } }
 const stockWalkthrough = { label: "Walkthrough: Setup VS Code Web", input: undefined }
@@ -97,4 +97,25 @@ test("a restored welcome page counts as the user's: no second copy, and nothing 
   const restored = { label: "Welcome", input: { viewType: "mainThreadWebview-oyren.welcome" } }
   const { calls } = await start({ tabs: [restored] })
   assert.ok(!calls.some(([command]) => command === "close" || command === "open welcome"))
+})
+
+// The fakes above hand in agentChatEnabled, so this is the one place that ties the setting the start
+// reads to the agent extension's own: renamed there, a chat turned back on would still be hidden here.
+test("the start reads the agent extension's switch, under the agent extension's spelling", () => {
+  const { SETTING_SECTION, SETTING_KEY } = require("../oyren-agent-extension/agentChatGate")
+  const read = []
+  const vscode = {
+    workspace: {
+      getConfiguration: (section) => ({
+        get: (key, fallback) => {
+          read.push(`${section}.${key}`)
+          return fallback
+        },
+      }),
+    },
+    window: { tabGroups: { all: [] } },
+  }
+  assert.equal(apiFrom(vscode, { workspaceState: {} }).agentChatEnabled(), false)
+  assert.deepEqual(read, [`${SETTING_SECTION}.${SETTING_KEY}`])
+  assert.equal(AGENT_CHAT_SETTING, `${SETTING_SECTION}.${SETTING_KEY}`)
 })

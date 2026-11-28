@@ -14,6 +14,11 @@
 const { SIDE_BAR_DEFAULTS, editorApp } = require("./editorApps")
 
 const CHAT_HIDDEN = "chatSetupHidden"
+// The agent extension's switch (oyren-agent-extension/agentChatGate.js; startup.test.js keeps the two
+// spellings the same).
+const AGENT_CHAT_SECTION = "oyren"
+const AGENT_CHAT_KEY = "agentChat.enabled"
+const AGENT_CHAT_SETTING = `${AGENT_CHAT_SECTION}.${AGENT_CHAT_KEY}`
 // Workspace-scoped: a fresh Codespace defaults once, and a later pick of another tool is kept.
 const SIDE_BAR_LATCH = "oyren.welcome.sideBarDefaulted"
 
@@ -74,7 +79,7 @@ function apiFrom(vscode, context) {
   return {
     executeCommand: (command, ...args) => vscode.commands.executeCommand(command, ...args),
     hasExtension: (id) => Boolean(vscode.extensions.getExtension(id)),
-    agentChatEnabled: () => vscode.workspace.getConfiguration("oyren").get("agentChat.enabled", false) === true,
+    agentChatEnabled: () => vscode.workspace.getConfiguration(AGENT_CHAT_SECTION).get(AGENT_CHAT_KEY, false) === true,
     showOnStartup: () => vscode.workspace.getConfiguration("oyren.welcome").get("showOnStartup", true) !== false,
     tabGroups: vscode.window.tabGroups,
     closeTabs: (tabs) => vscode.window.tabGroups.close(tabs),
@@ -84,4 +89,4 @@ function apiFrom(vscode, context) {
   }
 }
 
-module.exports = { runStartup, runFirst, hideBuiltInChat, apiFrom, SIDE_BAR_LATCH }
+module.exports = { runStartup, runFirst, hideBuiltInChat, apiFrom, SIDE_BAR_LATCH, AGENT_CHAT_SETTING }

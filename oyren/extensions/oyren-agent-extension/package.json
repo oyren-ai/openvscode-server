@@ -34,7 +34,8 @@
         "oyren.agentChat.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Show the Oyren Agent chat (one chat for every CLI agent) in the built-in Chat view. Off by default: Codespaces use the Claude Code and Codex panels instead. Takes effect after a reload."
+          "scope": "machine",
+          "description": "Show the Oyren Agent chat (one chat for every CLI agent) in the built-in Chat view. Off by default: Codespaces use the Claude Code and Codex panels instead. A machine setting, so a repository's own .vscode/settings.json cannot turn it on. Takes effect after a reload."
         }
       }
     },
